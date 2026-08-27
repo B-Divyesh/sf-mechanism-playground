@@ -117,23 +117,61 @@ function partShape(type: PartType): string {
   }
 }
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function svgElement<K extends keyof SVGElementTagNameMap>(name: K): SVGElementTagNameMap[K] {
+  return document.createElementNS(SVG_NS, name);
+}
+
+function renderConnection(connection: { point: { x: number; y: number } }): SVGCircleElement {
+  const dot = svgElement('circle');
+  dot.setAttribute('class', 'connection-dot');
+  dot.setAttribute('cx', String(connection.point.x));
+  dot.setAttribute('cy', String(connection.point.y));
+  dot.setAttribute('r', '6');
+  return dot;
+}
+
+function renderPart(part: Part, powered: Set<string>): SVGGElement {
+  const definition = PARTS[part.type];
+  const group = svgElement('g');
+  group.setAttribute('class', ['mechanism-part', powered.has(part.id) ? 'powered' : '', selectedId === part.id ? 'selected' : ''].filter(Boolean).join(' '));
+  // Part IDs are untrusted import data. DOM setters keep them text data rather
+  // than allowing an HTML parser to treat them as attributes or markup.
+  group.dataset.partId = part.id;
+  group.dataset.partType = part.type;
+  group.setAttribute('tabindex', '0');
+  group.setAttribute('role', 'button');
+  group.setAttribute('aria-label', `${definition.label}, at ${Math.round(part.x)}, ${Math.round(part.y)}${powered.has(part.id) ? ', powered' : ''}`);
+  group.setAttribute('transform', `translate(${part.x} ${part.y}) rotate(${part.rotation})`);
+
+  const selectionRing = svgElement('circle');
+  selectionRing.setAttribute('class', 'selection-ring');
+  selectionRing.setAttribute('r', String(Math.max(43, definition.width / 2 + 9)));
+  group.append(selectionRing);
+
+  const shape = svgElement('g');
+  shape.setAttribute('class', 'moving-shape');
+  // This is only application-authored SVG selected from the closed PartType union.
+  shape.innerHTML = partShape(part.type);
+  group.append(shape);
+
+  for (const port of definition.ports) {
+    const portMarker = svgElement('circle');
+    portMarker.setAttribute('class', 'port');
+    portMarker.setAttribute('cx', String(port.x));
+    portMarker.setAttribute('cy', String(port.y));
+    portMarker.setAttribute('r', '6');
+    group.append(portMarker);
+  }
+  return group;
+}
+
 function renderBoard(): void {
   const connections = getConnections(parts);
   const powered = poweredIds(parts, connections);
-  connectionsLayer.innerHTML = connections.map((connection) =>
-    `<circle class="connection-dot" cx="${connection.point.x}" cy="${connection.point.y}" r="6"/>`
-  ).join('');
-  partsLayer.innerHTML = parts.map((part) => {
-    const definition = PARTS[part.type];
-    const ports = PARTS[part.type].ports.map((port) =>
-      `<circle class="port" cx="${port.x}" cy="${port.y}" r="6"/>`
-    ).join('');
-    const classes = ['mechanism-part', powered.has(part.id) ? 'powered' : '', selectedId === part.id ? 'selected' : ''].filter(Boolean).join(' ');
-    return `<g class="${classes}" data-part-id="${part.id}" data-part-type="${part.type}" tabindex="0" role="button" aria-label="${definition.label}, at ${Math.round(part.x)}, ${Math.round(part.y)}${powered.has(part.id) ? ', powered' : ''}" transform="translate(${part.x} ${part.y}) rotate(${part.rotation})">
-      <circle class="selection-ring" r="${Math.max(43, definition.width / 2 + 9)}"/>
-      <g class="moving-shape">${partShape(part.type)}</g>${ports}
-    </g>`;
-  }).join('');
+  connectionsLayer.replaceChildren(...connections.map(renderConnection));
+  partsLayer.replaceChildren(...parts.map((part) => renderPart(part, powered)));
   byId('empty-board').hidden = parts.length > 0;
   updateMotion();
 }

@@ -3,7 +3,7 @@
   "name": "Mechanism Playground",
   "short_name": "Mechanisms",
   "description": "Build small playable machines from gears, cams, levers and linkages.",
-  "start_url": "/?source=pwa&v=1",
+  "start_url": "/?source=pwa&v=2",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",

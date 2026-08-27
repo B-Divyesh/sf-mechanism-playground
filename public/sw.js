@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'mechanism-playground-v1';
+const CACHE_VERSION = 'mechanism-playground-v2';
 const APP_SHELL = [
   '/',
   '/index.html',

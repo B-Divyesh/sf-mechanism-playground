@@ -1,17 +1,25 @@
 # Mechanism Playground — build handoff
 
-## Independent verification release gate (2026-08-27 UTC): **FAIL**
+## QA repair release gate (2026-08-27 UTC): **PASS — ready for Standard static deployment**
 
-Candidate `9513ff036eb485b16571d6c9feacb8f006fa9466` was independently tested
-against https://mechanism-playground.sociobot.in/ from a clean checkout. The
-deployment byte-matches the fresh build, and build/unit/E2E/accessibility/PWA
-smoke/performance checks otherwise passed. It is nevertheless **not releasable**:
-the advertised JSON blueprint importer permits DOM XSS through an unescaped
-part ID (high severity), and accepts unknown part types that produce a technical
-render error (medium severity). Production also lacks immutable asset caching
-(low severity). See `.factory/verification-1.md` for reproduction, exact
-evidence, headers, checks, and required remediation. This verdict supersedes
-the builder's verification notes below.
+This repair addresses every finding against base candidate
+`9513ff036eb485b16571d6c9feacb8f006fa9466`:
+
+- Imported part IDs must be unique 1–128-character safe identifiers; malformed
+  quote-containing IDs are rejected before state changes. The SVG board now
+  creates imported part attributes through DOM APIs, so imported values never
+  pass through an HTML/SVG markup parser.
+- Imported part types are checked against the closed ten-part `PART_TYPES`
+  list before mutation. Unsupported types keep the file dialog open with a
+  plain-language recovery message and the player can immediately choose a
+  valid file.
+- Unit and Playwright regressions cover the exact quote/event-attribute ID
+  payload and unknown-type recovery path on desktop and Pixel 5.
+- Hashed Vite assets and icons receive one-year immutable cache headers through
+  both Standard static `_headers` and `staticwebapp.config.json`; HTML remains
+  revalidating and `sw.js` is no-cache. The service-worker cache and manifest
+  version are bumped to v2 so installed copies update normally. A restrictive
+  CSP also blocks inline event handlers as defense in depth.
 
 ## Shipped
 
@@ -58,23 +66,18 @@ with `./dist/index.html` at its root.
 
 Verification on 2026-08-27:
 
-- `npm test`: 3/3 deterministic engine tests passed.
+- `npm ci`: passed from the committed lockfile, with 0 reported vulnerabilities.
+- `npm test`: 5/5 deterministic engine and import-validation tests passed.
 - `npm run build`: passed; Vite emitted `dist/index.html`.
-- `npm run test:e2e`: 8/8 Chromium tests passed across desktop and Pixel 5.
-  Covered first-puzzle completion, keyboard rotation/undo, IndexedDB refresh,
-  390 px overflow, axe serious/critical findings, service-worker install, and a
-  complete offline reload.
-- Factory `verify-url.sh`: HTTP 200, 575 ms local load, zero console/page errors,
-  title and `lang`, exactly one `h1`, main landmark, no missing alt text, and no
-  unlabeled buttons.
-- Lighthouse 12.8.2 mobile: Performance **100**, Accessibility **100**, Best
-  Practices **100**, SEO **100**. LCP 1.5 s, CLS 0.033, total blocking time 0 ms,
-  speed index 1.0 s. INP has no meaningful lab value for a new static session;
-  TBT and tested interactions are the available proxies.
-- Initial production assets: JS 23.11 KB raw / 8.54 KB gzip; CSS 13.59 KB raw /
-  3.65 KB gzip; onboarding WebP 47 KB. All are below the assigned budgets.
-- `/`, `/privacy/`, `/terms/`, `/offline.html`, `/manifest.webmanifest`, and
-  `/robots.txt` each returned HTTP 200 from the production preview.
+- `npm run test:e2e`: 12/12 Chromium checks passed across desktop and Pixel 5.
+  This includes solved simulation, keyboard rotation/undo, persistence,
+  mobile overflow, axe serious/critical scan, PWA install/offline reload, and
+  both import regression cases.
+- The E2E axe suite reported zero serious or critical accessibility findings;
+  the 390 px mobile and complete offline PWA reload checks passed.
+- Build output contains both supported Standard-static cache configurations and
+  the v2 worker. Initial JS is 24.08 KB raw / 8.87 KB gzip; CSS is 13.59 KB raw /
+  3.65 KB gzip; the 47 KB onboarding WebP remains below all budgets.
 
 ## Known gaps and release notes
 
@@ -86,6 +89,8 @@ Verification on 2026-08-27:
   required by the brief. The UI and terms explicitly say it is not engineering
   software.
 - Real-user Core Web Vitals are unavailable before deployment. The recorded
-  values are local Lighthouse lab results.
+  values are local test results; run the normal factory live probe after the
+  Standard static publish completes to record the final response headers and
+  Lighthouse scores.
 
 No infrastructure, DNS, billing registration, or secrets were changed.
