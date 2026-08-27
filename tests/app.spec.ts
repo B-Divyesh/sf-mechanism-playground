@@ -53,6 +53,33 @@ test('fits a 390px mobile viewport without page overflow', async ({ page }, test
   await page.screenshot({ path: testInfo.outputPath('mobile.png'), fullPage: true });
 });
 
+test('keeps Blueprint file import and export on the 390px keyboard path', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'This is an exact phone-width regression.');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+
+  // The disabled Undo button is skipped, so the second tab stops at this
+  // always-visible local-first escape hatch.
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
+  const fileButton = page.getByRole('button', { name: 'Blueprint file' });
+  await expect(fileButton).toBeFocused();
+  await expect(fileButton).toBeVisible();
+  await expect(fileButton).toHaveText('Blueprint file');
+  await expect(fileButton).toHaveCSS('font-size', '12.8px');
+
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#file-dialog')).toBeVisible();
+  const exportButton = page.getByRole('button', { name: 'Export blueprint' });
+  await expect(exportButton).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Import blueprint' })).toBeVisible();
+
+  await exportButton.focus();
+  const download = page.waitForEvent('download');
+  await page.keyboard.press('Enter');
+  await expect((await download).suggestedFilename()).toMatch(/^mechanism-blueprint-\d{4}-\d{2}-\d{2}\.json$/);
+});
+
 test('reloads the full workshop offline after installation', async ({ page, context }) => {
   await page.goto('/');
   await page.evaluate(() => navigator.serviceWorker.ready);
