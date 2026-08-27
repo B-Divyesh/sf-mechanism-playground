@@ -4,8 +4,8 @@
 
 This repair resolves both findings in independent verifier report
 `07263c1e2bf5df14b57acfc3245275dbc6861bbe` for candidate `ff07db21`.
-The Standard static deployment is built from this repaired `main` worktree;
-the final production identity check is recorded below after deployment.
+Repair commit `c31a8d7962ac450fa0517dfb02e0720c924fd639` was pushed and its
+verified `dist/` output was deployed as Standard static.
 
 ## What changed
 
@@ -44,13 +44,19 @@ Clean verification on 2026-08-27 UTC:
 
 ## Deployment identity and PWA
 
-The target is the existing Standard Azure Static Web App
-`sf-mechanism-playground` (`mechanism-playground.sociobot.in`). After deploy,
-compare the production root document and every referenced hashed JS/CSS asset
-with a clean local `dist/` build before accepting the release. This prevents
-the concurrent-deployment mismatch reported by verifier-2. `sw.js` remains
-no-cache while hashed assets are immutable; the service-worker offline reload
-is covered by the browser suite.
+The target Standard Azure Static Web App is `sf-mechanism-playground`
+(`mechanism-playground.sociobot.in`). The live custom domain and Azure default
+hostname both match local `dist/index.html` SHA-256
+`b3f70a8a3f7180bdfa132b7506ccb2af43fc007beacb41e2a1e356a5bceba8be`
+and reference the same assets: `index-Bv3AmGK4.css` and
+`index-oX4eCrPy.js`. Those two public assets also match the local build
+byte-for-byte. This is the identity check that prevents the earlier
+concurrent-deployment mismatch.
+
+Live Pixel 5 / 390 px smoke confirmed `lang=en`, one h1, main landmark, no
+horizontal overflow, zero browser errors, zero axe serious/critical findings,
+Tab/Enter access to Blueprint file, and an installed service-worker offline
+reload. `sw.js` is no-cache/no-store, while hashed assets are immutable.
 
 ## Known limits
 
