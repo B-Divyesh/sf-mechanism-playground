@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#071e2f">
+    <meta name="description" content="Build cams, gears, linkages and levers into small playable machines.">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/icons/icon-192.png">
+    <title>Mechanism Playground — Build a machine that moves</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to workbench</a>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand-block">
+          <span class="eyebrow">Pocket kinematics lab · ages 10+</span>
+          <h1>Mechanism Playground</h1>
+        </div>
+        <div class="top-actions" aria-label="Project actions">
+          <span id="save-status" class="save-status" aria-live="polite">Saved locally</span>
+          <button id="undo-button" class="icon-button" type="button" title="Undo last change" aria-label="Undo last change" disabled>↶</button>
+          <button id="file-button" class="text-button" type="button">Blueprint file</button>
+          <button id="help-button" class="icon-button" type="button" aria-label="Open building guide">?</button>
+        </div>
+      </header>
+
+      <div id="offline-banner" class="offline-banner" role="status" hidden>
+        Offline workshop — your board still works and saves on this device.
+      </div>
+
+      <main id="main" class="workbench">
+        <aside class="parts-panel" aria-labelledby="parts-title">
+          <div class="panel-heading">
+            <div><span class="index-mark">01</span><h2 id="parts-title">Parts drawer</h2></div>
+            <button id="clear-button" class="quiet-button" type="button">Clear</button>
+          </div>
+          <p class="panel-note">Choose a part, then tap the sheet. Drag parts to join their round ports.</p>
+          <div id="parts-list" class="parts-list" role="group" aria-label="Mechanism parts"></div>
+        </aside>
+
+        <section class="board-panel" aria-labelledby="board-title">
+          <div class="board-toolbar">
+            <div>
+              <span class="index-mark">02</span>
+              <h2 id="board-title">Drawing sheet</h2>
+              <span id="board-mode" class="mode-label">Free build</span>
+            </div>
+            <div class="machine-controls" aria-label="Machine controls">
+              <button id="step-button" class="tool-button" type="button" title="Advance one step">Step</button>
+              <label class="phase-control"><span>Position</span><input id="phase-range" type="range" min="0" max="100" value="0" aria-label="Mechanism position"></label>
+              <label class="speed-toggle"><input id="slow-toggle" type="checkbox"> <span>Slow</span></label>
+              <button id="run-button" class="crank-button" type="button" aria-pressed="false"><span aria-hidden="true">↻</span> Turn crank</button>
+            </div>
+          </div>
+          <div class="board-wrap">
+            <svg id="board" class="board" viewBox="0 0 800 500" role="application" aria-label="Mechanism drawing sheet. Select a part and use arrow keys to move it, R to rotate, and Delete to remove it.">
+              <rect class="board-hitbox" width="800" height="500" fill="transparent" />
+              <g id="connections-layer"></g>
+              <g id="parts-layer"></g>
+            </svg>
+            <div id="empty-board" class="empty-board">
+              <span class="empty-compass" aria-hidden="true">⌖</span>
+              <strong>Your sheet is ready</strong>
+              <span>Pick a part or open Puzzle 01.</span>
+              <button id="empty-start-button" type="button">Start first puzzle</button>
+            </div>
+            <div class="board-scale" aria-hidden="true">0 · · · 100 · · · 200 mm</div>
+          </div>
+          <div class="inspector" aria-live="polite">
+            <div id="selection-info">No part selected</div>
+            <div class="inspector-actions">
+              <button id="rotate-button" type="button" disabled>Rotate 45° <kbd>R</kbd></button>
+              <button id="delete-button" class="danger-button" type="button" disabled>Remove <kbd>Del</kbd></button>
+            </div>
+          </div>
+          <div id="puzzle-status" class="puzzle-status" aria-live="polite"></div>
+        </section>
+
+        <aside class="puzzles-panel" aria-labelledby="puzzles-title">
+          <div class="panel-heading">
+            <div><span class="index-mark">03</span><h2 id="puzzles-title">Puzzle notebook</h2></div>
+            <span id="progress-count" class="progress-count">0/10</span>
+          </div>
+          <p class="panel-note">Connect every required part between crank and bell.</p>
+          <ol id="puzzle-list" class="puzzle-list"></ol>
+          <div class="upgrade-note">
+            <span class="stamp">FORGE EDITION</span>
+            <p>Unlock puzzles 6–10 for a one-time <strong>US$4</strong> purchase.</p>
+            <button id="upgrade-button" type="button">See the puzzle pack</button>
+          </div>
+        </aside>
+      </main>
+
+      <footer>
+        <span>No accounts. No ads. Your blueprints stay on this device.</span>
+        <nav aria-label="Legal"><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></nav>
+        <span>Illustration generated for this product.</span>
+      </footer>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <div id="update-toast" class="toast update-toast" role="status" hidden>
+      A fresh workshop is ready. <button id="update-button" type="button">Update now</button>
+    </div>
+
+    <dialog id="guide-dialog" class="paper-dialog" aria-labelledby="guide-title">
+      <button class="dialog-close" data-close-dialog type="button" aria-label="Close guide">×</button>
+      <div class="guide-grid">
+        <img src="/assets/crank-machine.webp" width="960" height="640" alt="Cyanotype drawing of a crank driving gears, a cam, linkage, lever and bell" fetchpriority="high" decoding="async">
+        <div class="guide-copy">
+          <span class="eyebrow">Three-minute field lesson</span>
+          <h2 id="guide-title">Make motion travel</h2>
+          <ol>
+            <li><strong>Choose</strong> a part from the drawer.</li>
+            <li><strong>Place</strong> it on the sheet and touch round ports together.</li>
+            <li><strong>Turn</strong> the crank. Mint outlines show every powered part.</li>
+          </ol>
+          <p>Keyboard: arrow keys nudge, <kbd>R</kbd> rotates, <kbd>Delete</kbd> removes, and <kbd>Space</kbd> starts or pauses.</p>
+          <div class="dialog-actions">
+            <button id="guide-start-button" class="primary-button" type="button">Start Puzzle 01</button>
+            <button data-close-dialog class="quiet-button" type="button">Build freely</button>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="file-dialog" class="paper-dialog compact-dialog" aria-labelledby="file-title">
+      <button class="dialog-close" data-close-dialog type="button" aria-label="Close blueprint file options">×</button>
+      <span class="eyebrow">Local-first tools</span>
+      <h2 id="file-title">Own your blueprint</h2>
+      <p>Export a portable JSON copy or bring one back. Nothing is uploaded.</p>
+      <div class="file-actions">
+        <button id="export-button" class="primary-button" type="button">Export blueprint</button>
+        <button id="import-button" type="button">Import blueprint</button>
+        <input id="import-file" type="file" accept="application/json,.json" hidden>
+      </div>
+      <p id="file-error" class="error-text" role="alert"></p>
+    </dialog>
+
+    <dialog id="upgrade-dialog" class="paper-dialog compact-dialog" aria-labelledby="upgrade-title">
+      <button class="dialog-close" data-close-dialog type="button" aria-label="Close Forge Edition details">×</button>
+      <span class="stamp">FORGE EDITION</span>
+      <h2 id="upgrade-title">Five harder machines</h2>
+      <p>Puzzles 1–5, free build, local saving, and blueprint export stay free. A one-time <strong>US$4</strong> purchase unlocks puzzles 6–10 on every device where you restore your license.</p>
+      <a id="buy-link" class="primary-button link-button" href="https://api.sociobot.in/api/v1/products/mechanism-playground/checkout">Buy once for US$4</a>
+      <form id="license-form" class="license-form">
+        <label for="license-input">Already bought it? Paste your license</label>
+        <div><input id="license-input" autocomplete="off" spellcheck="false" required><button type="submit">Restore</button></div>
+        <p id="license-status" role="status"></p>
+      </form>
+      <p class="legal-note">Sociobot/Dodo is the merchant of record and handles refunds. A refunded license is revoked automatically. <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></p>
+    </dialog>
+
+    <script type="module" src="/src/app.ts"></script>
+  </body>
+</html>

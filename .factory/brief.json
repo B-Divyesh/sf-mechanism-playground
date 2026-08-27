@@ -1,0 +1,11 @@
+{
+  "slug": "mechanism-playground",
+  "title": "Mechanism Playground",
+  "territory": "games-creative",
+  "user": "A curious player or teacher who wants to assemble cams, gears, linkages, and levers into a small playable machine rather than merely watch an animation of one.",
+  "smallest_useful_product": "Mobile-friendly 2D sandbox with ten kinematic primitives, snap points, a hand crank, slow motion, and ten local puzzle cards.",
+  "artifact_class": "pwa-offline",
+  "monetization": "one-time",
+  "constraints": "Use a deterministic, simplified kinematic model and make the age range clear; no user chat or data collection.",
+  "state": "RESEARCHED"
+}
