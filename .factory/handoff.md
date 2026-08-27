@@ -1,5 +1,13 @@
 # Mechanism Playground — build handoff
 
+## Latest independent release gate (2026-08-27 UTC): **FAIL — do not release `ff07db21a8882b03082c97c726076ac94f797c19`**
+
+This independent result supersedes the candidate's earlier self-reported pass. Fresh evidence is recorded in `.factory/verification-2.md`.
+
+- `npm ci`, `npm test` (5/5), and `npm run build` passed, but `npm run test:e2e` failed: 10 passed and 2 mobile import tests failed. At 390 px, the only **Blueprint file** import/export control is hidden by `.text-button { display: none; }`, so local-first data import/export is inaccessible.
+- Production at https://mechanism-playground.sociobot.in is **not the tested candidate**. The candidate build references `index-CClMJpw1.js` and `index-Vp2DNR6w.css`; live references `index-DJUlDQtU.js` and `index-429qQlkG.css`, with different root-document checksums.
+- Do not promote this candidate until a visible mobile Blueprint-file path is restored, all tests pass, and deployed files match a fresh candidate build.
+
 ## QA repair release gate (2026-08-27 UTC): **PASS — ready for Standard static deployment**
 
 This repair addresses every finding against base candidate
