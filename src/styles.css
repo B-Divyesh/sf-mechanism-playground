@@ -155,8 +155,10 @@ footer nav { display: flex; gap: 14px; }
 
 @media (max-width: 680px) {
   .topbar { min-height: 66px; padding: 9px 12px; }
-  .brand-block .eyebrow, .save-status, .text-button { display: none; }
+  .brand-block .eyebrow, .save-status { display: none; }
   .brand-block h1 { font-size: 1.25rem; }
+  .text-button { width: 44px; padding: 0; font-size: 0; }
+  .text-button::after { content: '⌑'; font-size: 1.2rem; }
   .workbench { display: flex; min-height: 0; flex-direction: column; }
   .parts-panel { order: 2; padding: 10px 12px; border-top: 1px solid var(--blue-600); border-right: 0; }
   .parts-panel .panel-note { display: none; }

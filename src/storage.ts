@@ -1,4 +1,4 @@
-import { PART_TYPES, type Part, type PartType } from './engine';
+import { PART_TYPES, PUZZLES, type Part, type PartType } from './engine';
 
 export interface SavedPlayground {
   version: 1;
@@ -13,9 +13,10 @@ const STORE_NAME = 'playground';
 const STATE_KEY = 'current';
 const FALLBACK_KEY = 'mechanism-playground:current';
 const PART_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
+const MAX_PARTS = 250;
 
-function isPartType(value: string): value is PartType {
-  return PART_TYPES.includes(value as PartType);
+function isPartType(value: unknown): value is PartType {
+  return typeof value === 'string' && PART_TYPES.includes(value as PartType);
 }
 
 function openDatabase(): Promise<IDBDatabase> {
@@ -32,10 +33,10 @@ function openDatabase(): Promise<IDBDatabase> {
 export async function loadPlayground(): Promise<SavedPlayground | null> {
   try {
     const db = await openDatabase();
-    const value = await new Promise<SavedPlayground | undefined>((resolve, reject) => {
+    const value = await new Promise<unknown>((resolve, reject) => {
       const transaction = db.transaction(STORE_NAME, 'readonly');
-      const request = transaction.objectStore(STORE_NAME).get(STATE_KEY);
-      request.onsuccess = () => resolve(request.result as SavedPlayground | undefined);
+      const request = transaction.objectStore(STORE_NAME).get(STATE_KEY) as IDBRequest<unknown>;
+      request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
     db.close();
@@ -67,25 +68,38 @@ export function validatePlayground(value: unknown): SavedPlayground {
   if (!value || typeof value !== 'object') throw new Error('This file is not a Mechanism Playground blueprint.');
   const candidate = value as Partial<SavedPlayground>;
   if (candidate.version !== 1 || !Array.isArray(candidate.parts)) throw new Error('This blueprint version cannot be opened.');
+  if (candidate.parts.length > MAX_PARTS) throw new Error('This blueprint has too many parts to open safely. Export a smaller sheet and try again.');
+
   const ids = new Set<string>();
+  const parts: Part[] = [];
   for (const part of candidate.parts) {
-    if (!part || typeof part.id !== 'string' || typeof part.type !== 'string' ||
+    if (!part || typeof part !== 'object' || typeof part.id !== 'string' ||
         !Number.isFinite(part.x) || !Number.isFinite(part.y) || !Number.isFinite(part.rotation)) {
       throw new Error('A part in this blueprint is damaged.');
     }
     if (!PART_ID.test(part.id) || ids.has(part.id)) {
-      throw new Error('A part ID contains unsupported characters or is duplicated. Export a fresh blueprint and try importing it again.');
+      throw new Error('This blueprint has an invalid part ID. Export a fresh copy from Mechanism Playground and try again.');
     }
     if (!isPartType(part.type)) {
-      throw new Error(`This blueprint uses the unsupported part type “${part.type}”. Choose a blueprint made by Mechanism Playground or export a fresh copy and try again.`);
+      throw new Error('This blueprint contains a part this workshop does not recognize. Choose a blueprint exported by Mechanism Playground and try again.');
     }
     ids.add(part.id);
+    parts.push({ id: part.id, type: part.type, x: part.x, y: part.y, rotation: part.rotation });
   }
+
+  const validPuzzleIds = new Set(PUZZLES.map((puzzle) => puzzle.id));
+  if (candidate.activePuzzleId !== null && candidate.activePuzzleId !== undefined &&
+      (typeof candidate.activePuzzleId !== 'string' || !validPuzzleIds.has(candidate.activePuzzleId))) {
+    throw new Error('This blueprint refers to a puzzle this workshop does not recognize. Choose a blueprint exported by Mechanism Playground and try again.');
+  }
+
   return {
     version: 1,
     updatedAt: typeof candidate.updatedAt === 'string' ? candidate.updatedAt : new Date().toISOString(),
-    parts: candidate.parts.map((part) => ({ ...part, type: part.type as PartType })),
+    parts,
     activePuzzleId: typeof candidate.activePuzzleId === 'string' ? candidate.activePuzzleId : null,
-    completedPuzzleIds: Array.isArray(candidate.completedPuzzleIds) ? candidate.completedPuzzleIds.filter((id): id is string => typeof id === 'string') : []
+    completedPuzzleIds: Array.isArray(candidate.completedPuzzleIds)
+      ? candidate.completedPuzzleIds.filter((id): id is string => typeof id === 'string' && validPuzzleIds.has(id))
+      : []
   };
 }

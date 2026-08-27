@@ -1,6 +1,20 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
+function blueprintFile(part: Record<string, unknown>, name = 'blueprint.json') {
+  return {
+    name,
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({
+      version: 1,
+      updatedAt: '2026-08-27T00:00:00.000Z',
+      parts: [part],
+      activePuzzleId: null,
+      completedPuzzleIds: []
+    }))
+  };
+}
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('mechanism-playground:intro', 'seen'));
 });
@@ -51,56 +65,39 @@ test('reloads the full workshop offline after installation', async ({ page, cont
   await expect(page.locator('#offline-banner')).toBeVisible();
 });
 
-test('rejects a quote-containing imported part ID without interpreting it as markup', async ({ page }) => {
+test('rejects a quote-containing imported ID before it can become SVG markup', async ({ page }) => {
+  const pageErrors: Error[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error));
   await page.goto('/');
   await page.getByRole('button', { name: 'Blueprint file' }).click();
-  await page.locator('#import-file').setInputFiles({
-    name: 'hostile-id.json',
-    mimeType: 'application/json',
-    buffer: Buffer.from(JSON.stringify({
-      version: 1,
-      updatedAt: '2026-08-27T00:00:00.000Z',
-      parts: [{
-        id: 'gear\" onclick=\"document.body.dataset.qaExecuted=\"yes',
-        type: 'gearSmall', x: 180, y: 248, rotation: 0
-      }],
-      activePuzzleId: null,
-      completedPuzzleIds: []
-    }))
-  });
-  await expect(page.locator('#file-error')).toContainText(/part ID contains unsupported characters/i);
+  await page.locator('#import-file').setInputFiles(blueprintFile({
+    id: 'gear" onclick="document.body.dataset.qaExecuted=\'yes\'',
+    type: 'gearSmall', x: 182, y: 248, rotation: 0
+  }, 'quoted-id.json'));
+
+  await expect(page.locator('#file-error')).toContainText('invalid part ID');
+  await expect(page.locator('#file-dialog')).toBeVisible();
+  await expect(page.locator('#parts-layer .mechanism-part')).toHaveCount(0);
   await expect(page.locator('body')).not.toHaveAttribute('data-qa-executed', 'yes');
-  await expect(page.locator('[data-part-id]')).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
 });
 
-test('rejects unknown imported part types and lets the player recover with a valid blueprint', async ({ page }) => {
+test('rejects an unknown imported type and leaves the current machine usable', async ({ page }) => {
+  const pageErrors: Error[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error));
   await page.goto('/');
+  await page.getByRole('button', { name: /Puzzle 1: First turn/ }).click();
+  await expect(page.locator('#parts-layer .mechanism-part')).toHaveCount(2);
   await page.getByRole('button', { name: 'Blueprint file' }).click();
-  const input = page.locator('#import-file');
-  await input.setInputFiles({
-    name: 'unknown-part.json',
-    mimeType: 'application/json',
-    buffer: Buffer.from(JSON.stringify({
-      version: 1,
-      updatedAt: '2026-08-27T00:00:00.000Z',
-      parts: [{ id: 'unknown-1', type: 'not-a-part', x: 180, y: 248, rotation: 0 }],
-      activePuzzleId: null,
-      completedPuzzleIds: []
-    }))
-  });
-  await expect(page.locator('#file-error')).toContainText(/unsupported part type/i);
+  await page.locator('#import-file').setInputFiles(blueprintFile({
+    id: 'unknown-type-01', type: 'not-a-part', x: 182, y: 248, rotation: 0
+  }, 'unknown-type.json'));
+
+  await expect(page.locator('#file-error')).toContainText('does not recognize');
   await expect(page.locator('#file-dialog')).toBeVisible();
-  await input.setInputFiles({
-    name: 'valid-blueprint.json',
-    mimeType: 'application/json',
-    buffer: Buffer.from(JSON.stringify({
-      version: 1,
-      updatedAt: '2026-08-27T00:00:00.000Z',
-      parts: [{ id: 'valid-gear-1', type: 'gearSmall', x: 180, y: 248, rotation: 0 }],
-      activePuzzleId: null,
-      completedPuzzleIds: []
-    }))
-  });
-  await expect(page.locator('#file-dialog')).not.toBeVisible();
-  await expect(page.getByRole('button', { name: /Small gear, at 180, 248/ })).toBeVisible();
+  await expect(page.locator('#parts-layer .mechanism-part')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Close blueprint file options' }).click();
+  await page.getByRole('button', { name: /Turn crank/ }).click();
+  await expect(page.getByRole('button', { name: /Pause/ })).toBeVisible();
+  expect(pageErrors).toEqual([]);
 });

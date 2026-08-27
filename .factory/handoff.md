@@ -1,54 +1,35 @@
-# Mechanism Playground — build handoff
+# Mechanism Playground — repair handoff
 
-## QA repair release gate (2026-08-27 UTC): **PASS — ready for Standard static deployment**
+## Release status
 
-This repair addresses every finding against base candidate
-`9513ff036eb485b16571d6c9feacb8f006fa9466`:
+Repair candidate for QA report `7e767373043f24f23969bc6d020e41eb1ce906c5`.
+This change fixes the unsafe blueprint-import path, unknown-part recovery, and
+static caching policy while retaining the deterministic simulator, local-first
+storage, and installable PWA behaviour.
 
-- Imported part IDs must be unique 1–128-character safe identifiers; malformed
-  quote-containing IDs are rejected before state changes. The SVG board now
-  creates imported part attributes through DOM APIs, so imported values never
-  pass through an HTML/SVG markup parser.
-- Imported part types are checked against the closed ten-part `PART_TYPES`
-  list before mutation. Unsupported types keep the file dialog open with a
-  plain-language recovery message and the player can immediately choose a
-  valid file.
-- Unit and Playwright regressions cover the exact quote/event-attribute ID
-  payload and unknown-type recovery path on desktop and Pixel 5.
-- Hashed Vite assets and icons receive one-year immutable cache headers through
-  both Standard static `_headers` and `staticwebapp.config.json`; HTML remains
-  revalidating and `sw.js` is no-cache. The service-worker cache and manifest
-  version are bumped to v2 so installed copies update normally. A restrictive
-  CSP also blocks inline event handlers as defense in depth.
+## What changed
 
-## Shipped
-
-- A complete responsive 2D mechanism workbench with ten primitives: hand crank,
-  large gear, small gear, eccentric cam, follower, linkage rod, lever, slider,
-  belt wheel, and bell.
-- Deterministic grid/port snapping and graph-based motion propagation. A shared
-  phase drives recognisable SVG motion for every powered part; this is
-  intentionally not a rigid-body or stress simulation.
-- Pointer placement, drag/drop, touch dragging, keyboard nudge/rotate/remove,
-  undo, clear/reset confirmation, hand-crank run/pause, slow motion, manual step,
-  and position scrubbing (also suitable for reduced-motion users).
-- Ten local puzzle cards with adaptive crank/bell starting positions, live
-  missing-part feedback, completion state, and local progress. Puzzles 1–5 and
-  free build are free; the optional Forge Edition unlocks puzzles 6–10.
-- Sociobot one-time paid unlock: production checkout URL, return-token capture,
-  local license storage, once-daily background verification, offline optimistic
-  verdict, inactive-license notice, and paste-to-restore flow.
-- IndexedDB autosave with localStorage fallback, plus explicit JSON export and
-  validated import. No account, analytics SDK, tracking, chat, or cloud project
-  storage.
-- Installable PWA manifest with 192/512/maskable icons, versioned service-worker
-  shell, navigation fallback, cache-first assets, update toast, and offline
-  notice/page. Privacy and terms routes are included.
-- Product-specific cyanotype drafting visual system, hand-authored SVG machine
-  art and icon, and one reviewed/generated original onboarding illustration.
-  Provenance and the complete prompt are recorded in `.factory/design.md`; the
-  optimized WebP is 47 KB.
-- README, MIT license, privacy/terms, robots/sitemap, and this handoff.
+- Blueprint input is treated as untrusted data. Part IDs must match a compact
+  `[A-Za-z0-9_-]` identifier, are unique, and are limited to 250 parts.
+- Imported part types must be one of the ten supported `PART_TYPES`. An unknown
+  type is rejected before state changes with a plain-language recovery message
+  in the still-open Blueprint file dialog.
+- Saved IndexedDB records now use the same validation as imports.
+- The board now creates SVG nodes and attributes with DOM APIs. Imported IDs are
+  data attributes only; they are never concatenated into SVG/HTML markup or
+  CSS selectors.
+- Added exact unit and Playwright regressions for the quote/event-attribute ID
+  payload and an `not-a-part` type. The browser regressions also confirm no
+  page errors, no state mutation, and continued crank operation after rejection.
+- Added a restrictive CSP (HTTP header for Azure Static Web Apps, plus a local
+  document policy) that disallows inline scripts/event handlers. It permits
+  only same-origin resources and the documented optional Sociobot license API.
+- Added `staticwebapp.config.json`: fingerprinted `/assets/*` and icons receive
+  `Cache-Control: public, max-age=31536000, immutable`; HTML defaults to
+  revalidation and `sw.js` is explicitly no-cache. The service-worker cache was
+  bumped to `v2` so installed clients receive the repaired shell.
+- On small screens, Blueprint file remains reachable as a compact 44 px icon,
+  preserving mobile import/export recovery.
 
 ## Run and verify
 
@@ -61,41 +42,38 @@ npm run test:e2e
 npm run preview
 ```
 
-The deployment command is exactly `npm run build`. Static output is `./dist`,
-with `./dist/index.html` at its root.
+Clean verification on 2026-08-27 UTC:
 
-Verification on 2026-08-27:
+- `npm ci`: passed; 59 packages audited, 0 vulnerabilities.
+- `npm test`: **6/6** passed (engine and exact import validation).
+- `npm run build`: passed; `dist/` includes the Azure Static Web Apps config.
+  Initial JS is 24.27 KB raw / 8.93 KB gzip; CSS is 13.67 KB raw / 3.68 KB
+  gzip, both well within budget.
+- `npm run test:e2e`: **12/12** passed across Desktop Chrome and Pixel 5.
+  This covers the simulator/puzzle path, keyboard/undo/persistence, mobile
+  overflow, axe serious/critical, service-worker offline reload, and both
+  import regressions.
+- Mobile Lighthouse against the clean production build: Performance **100**,
+  Accessibility **100**, Best Practices **100**, SEO **100**; LCP 1.5 s,
+  CLS 0.035, TBT 0 ms.
 
-- `npm ci`: passed from the committed lockfile, with 0 reported vulnerabilities.
-- `npm test`: 5/5 deterministic engine and import-validation tests passed.
-- `npm run build`: passed; Vite emitted `dist/index.html`.
-- `npm run test:e2e`: 12/12 Chromium checks passed across desktop and Pixel 5.
-  This includes solved simulation, keyboard rotation/undo, persistence,
-  mobile overflow, axe serious/critical scan, PWA install/offline reload, and
-  both import regression cases.
-- The E2E axe suite reported zero serious or critical accessibility findings;
-  the 390 px mobile and complete offline PWA reload checks passed.
-- Build output contains both supported Standard-static cache configurations and
-  the v2 worker. Initial JS is 24.08 KB raw / 8.87 KB gzip; CSS is 13.59 KB raw /
-  3.65 KB gzip; the 47 KB onboarding WebP remains below all budgets.
-- Standard Static deployment completed from commit `d3392c1`. Live production
-  serves the repaired hashed bundle, `Cache-Control: public, max-age=31536000,
-  immutable` for `/assets/*`, `Cache-Control: no-cache` for `sw.js`, CSP, and
-  `application/manifest+json` for the manifest.
-- Live 390 px Chromium smoke: HTTP 200, expected title/`lang`/one `h1`/`main`,
-  no horizontal overflow, zero console or page errors, zero axe serious/critical
-  findings, service-worker control, and a successful offline reload.
+## Deployment
 
-## Known gaps and release notes
+Deploy as Standard Azure Static Web Apps from `dist/`:
 
-- The factory must register `mechanism-playground` with the Sociobot billing API
-  and configure its return URL before a real purchase can complete. No secret or
-  test product identifier is committed.
-- The deterministic model teaches motion paths; it deliberately omits collision,
-  force, torque, material stress, CAD export, multiplayer, and user markets, as
-  required by the brief. The UI and terms explicitly say it is not engineering
-  software.
-- Real-user Core Web Vitals are unavailable before deployment. The checked
-  local and live browser results are synthetic checks, not field telemetry.
+```sh
+/opt/fleet/lib/deploy-static.sh mechanism-playground /work/repo/dist
+```
 
-No infrastructure, DNS, billing registration, or secrets were changed.
+After deploy, verify `https://mechanism-playground.sociobot.in/` with
+`/opt/fleet/lib/verify-url.sh` and inspect headers for CSP, immutable
+`/assets/` and `/icons/`, and no-cache `sw.js`.
+
+## Known limits
+
+- The deterministic model teaches motion paths; it deliberately omits physical
+  force, collision, stress, CAD export, multiplayer, and markets.
+- Real-user Core Web Vitals are unavailable before traffic. The recorded values
+  are a clean local Lighthouse lab run.
+- Sociobot billing registration/return URL remains a factory deployment task;
+  no payment secrets are committed.

@@ -49,6 +49,17 @@ const symbolFor: Record<PartType, string> = {
   crank: '↻', gearLarge: '⚙', gearSmall: '⚙', cam: '◒', follower: '↕',
   linkage: '╱', lever: '⌁', slider: '↔', pulley: '◎', bell: '♢'
 };
+const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
+
+function svgElement<T extends SVGElement>(name: string, attributes: Record<string, string | number> = {}): T {
+  const element = document.createElementNS(SVG_NAMESPACE, name) as T;
+  for (const [attribute, value] of Object.entries(attributes)) element.setAttribute(attribute, String(value));
+  return element;
+}
+
+function partElementById(id: string): SVGGElement | undefined {
+  return [...partsLayer.querySelectorAll<SVGGElement>('.mechanism-part')].find((element) => element.dataset.partId === id);
+}
 
 function announce(message: string): void {
   const toast = byId('toast');
@@ -102,76 +113,49 @@ function gearPoints(radius: number, teeth: number): string {
   return points.join(' ');
 }
 
-function partShape(type: PartType): string {
+function partShape(type: PartType): SVGElement[] {
+  const shape = (name: string, attributes: Record<string, string | number>): SVGElement => svgElement(name, attributes);
   switch (type) {
-    case 'crank': return '<circle class="part-shape" r="28"/><circle class="part-detail" r="6"/><path class="part-detail" d="M0 0 L19 -17 L31 -17"/><circle class="part-shape" cx="34" cy="-17" r="5"/>';
-    case 'gearLarge': return `<polygon class="part-shape" points="${gearPoints(44, 16)}"/><circle class="part-detail" r="29"/><circle class="part-shape" r="7"/><path class="part-detail" d="M-28 0 H28 M0 -28 V28"/>`;
-    case 'gearSmall': return `<polygon class="part-shape" points="${gearPoints(27, 12)}"/><circle class="part-detail" r="17"/><circle class="part-shape" r="5"/>`;
-    case 'cam': return '<ellipse class="part-shape" cx="7" cy="0" rx="29" ry="37" transform="rotate(-18)"/><circle class="part-shape" r="6"/><path class="part-detail" d="M0 0 L25 -13"/>';
-    case 'follower': return '<path class="part-shape" d="M-19 -31 H19 V31 H-19 Z"/><path class="part-detail" d="M0 -22 V17 M-10 17 H10 L6 28 H-6 Z"/><circle class="part-shape" cy="-22" r="7"/>';
-    case 'linkage': return '<path class="part-detail" d="M-49 0 L49 0" stroke-width="8"/><circle class="part-shape" cx="-49" r="9"/><circle class="part-shape" cx="49" r="9"/>';
-    case 'lever': return '<path class="part-shape" d="M-45 -8 L45 -8 L45 8 L-45 8 Z"/><path class="part-detail" d="M0 8 L-12 32 H12 Z"/><circle class="part-shape" r="7"/>';
-    case 'slider': return '<rect class="part-shape" x="-42" y="-23" width="84" height="46" rx="3"/><rect class="part-detail" x="-22" y="-13" width="44" height="26"/><path class="part-detail" d="M-34 31 H34 M-25 25 V37 M25 25 V37"/>';
-    case 'pulley': return '<circle class="part-shape" r="31"/><circle class="part-detail" r="23"/><circle class="part-shape" r="6"/><path class="part-detail" d="M-21 -21 L21 21 M21 -21 L-21 21"/>';
-    case 'bell': return '<path class="part-shape" d="M-26 19 H27 C19 10 20 -5 14 -18 C8 -31 -9 -31 -15 -18 C-21 -5 -18 10 -26 19 Z"/><path class="part-detail" d="M-31 20 H32"/><circle class="part-shape" cy="28" r="5"/>';
+    case 'crank': return [shape('circle', { class: 'part-shape', r: 28 }), shape('circle', { class: 'part-detail', r: 6 }), shape('path', { class: 'part-detail', d: 'M0 0 L19 -17 L31 -17' }), shape('circle', { class: 'part-shape', cx: 34, cy: -17, r: 5 })];
+    case 'gearLarge': return [shape('polygon', { class: 'part-shape', points: gearPoints(44, 16) }), shape('circle', { class: 'part-detail', r: 29 }), shape('circle', { class: 'part-shape', r: 7 }), shape('path', { class: 'part-detail', d: 'M-28 0 H28 M0 -28 V28' })];
+    case 'gearSmall': return [shape('polygon', { class: 'part-shape', points: gearPoints(27, 12) }), shape('circle', { class: 'part-detail', r: 17 }), shape('circle', { class: 'part-shape', r: 5 })];
+    case 'cam': return [shape('ellipse', { class: 'part-shape', cx: 7, cy: 0, rx: 29, ry: 37, transform: 'rotate(-18)' }), shape('circle', { class: 'part-shape', r: 6 }), shape('path', { class: 'part-detail', d: 'M0 0 L25 -13' })];
+    case 'follower': return [shape('path', { class: 'part-shape', d: 'M-19 -31 H19 V31 H-19 Z' }), shape('path', { class: 'part-detail', d: 'M0 -22 V17 M-10 17 H10 L6 28 H-6 Z' }), shape('circle', { class: 'part-shape', cy: -22, r: 7 })];
+    case 'linkage': return [shape('path', { class: 'part-detail', d: 'M-49 0 L49 0', 'stroke-width': 8 }), shape('circle', { class: 'part-shape', cx: -49, r: 9 }), shape('circle', { class: 'part-shape', cx: 49, r: 9 })];
+    case 'lever': return [shape('path', { class: 'part-shape', d: 'M-45 -8 L45 -8 L45 8 L-45 8 Z' }), shape('path', { class: 'part-detail', d: 'M0 8 L-12 32 H12 Z' }), shape('circle', { class: 'part-shape', r: 7 })];
+    case 'slider': return [shape('rect', { class: 'part-shape', x: -42, y: -23, width: 84, height: 46, rx: 3 }), shape('rect', { class: 'part-detail', x: -22, y: -13, width: 44, height: 26 }), shape('path', { class: 'part-detail', d: 'M-34 31 H34 M-25 25 V37 M25 25 V37' })];
+    case 'pulley': return [shape('circle', { class: 'part-shape', r: 31 }), shape('circle', { class: 'part-detail', r: 23 }), shape('circle', { class: 'part-shape', r: 6 }), shape('path', { class: 'part-detail', d: 'M-21 -21 L21 21 M21 -21 L-21 21' })];
+    case 'bell': return [shape('path', { class: 'part-shape', d: 'M-26 19 H27 C19 10 20 -5 14 -18 C8 -31 -9 -31 -15 -18 C-21 -5 -18 10 -26 19 Z' }), shape('path', { class: 'part-detail', d: 'M-31 20 H32' }), shape('circle', { class: 'part-shape', cy: 28, r: 5 })];
   }
-}
-
-const SVG_NS = 'http://www.w3.org/2000/svg';
-
-function svgElement<K extends keyof SVGElementTagNameMap>(name: K): SVGElementTagNameMap[K] {
-  return document.createElementNS(SVG_NS, name);
-}
-
-function renderConnection(connection: { point: { x: number; y: number } }): SVGCircleElement {
-  const dot = svgElement('circle');
-  dot.setAttribute('class', 'connection-dot');
-  dot.setAttribute('cx', String(connection.point.x));
-  dot.setAttribute('cy', String(connection.point.y));
-  dot.setAttribute('r', '6');
-  return dot;
-}
-
-function renderPart(part: Part, powered: Set<string>): SVGGElement {
-  const definition = PARTS[part.type];
-  const group = svgElement('g');
-  group.setAttribute('class', ['mechanism-part', powered.has(part.id) ? 'powered' : '', selectedId === part.id ? 'selected' : ''].filter(Boolean).join(' '));
-  // Part IDs are untrusted import data. DOM setters keep them text data rather
-  // than allowing an HTML parser to treat them as attributes or markup.
-  group.dataset.partId = part.id;
-  group.dataset.partType = part.type;
-  group.setAttribute('tabindex', '0');
-  group.setAttribute('role', 'button');
-  group.setAttribute('aria-label', `${definition.label}, at ${Math.round(part.x)}, ${Math.round(part.y)}${powered.has(part.id) ? ', powered' : ''}`);
-  group.setAttribute('transform', `translate(${part.x} ${part.y}) rotate(${part.rotation})`);
-
-  const selectionRing = svgElement('circle');
-  selectionRing.setAttribute('class', 'selection-ring');
-  selectionRing.setAttribute('r', String(Math.max(43, definition.width / 2 + 9)));
-  group.append(selectionRing);
-
-  const shape = svgElement('g');
-  shape.setAttribute('class', 'moving-shape');
-  // This is only application-authored SVG selected from the closed PartType union.
-  shape.innerHTML = partShape(part.type);
-  group.append(shape);
-
-  for (const port of definition.ports) {
-    const portMarker = svgElement('circle');
-    portMarker.setAttribute('class', 'port');
-    portMarker.setAttribute('cx', String(port.x));
-    portMarker.setAttribute('cy', String(port.y));
-    portMarker.setAttribute('r', '6');
-    group.append(portMarker);
-  }
-  return group;
 }
 
 function renderBoard(): void {
   const connections = getConnections(parts);
   const powered = poweredIds(parts, connections);
-  connectionsLayer.replaceChildren(...connections.map(renderConnection));
-  partsLayer.replaceChildren(...parts.map((part) => renderPart(part, powered)));
+  connectionsLayer.replaceChildren(...connections.map((connection) =>
+    svgElement<SVGCircleElement>('circle', { class: 'connection-dot', cx: connection.point.x, cy: connection.point.y, r: 6 })
+  ));
+  partsLayer.replaceChildren(...parts.map((part) => {
+    const definition = PARTS[part.type];
+    const classes = ['mechanism-part', powered.has(part.id) ? 'powered' : '', selectedId === part.id ? 'selected' : ''].filter(Boolean).join(' ');
+    const group = svgElement<SVGGElement>('g', {
+      class: classes,
+      'data-part-id': part.id,
+      'data-part-type': part.type,
+      tabindex: 0,
+      role: 'button',
+      'aria-label': `${definition.label}, at ${Math.round(part.x)}, ${Math.round(part.y)}${powered.has(part.id) ? ', powered' : ''}`,
+      transform: `translate(${part.x} ${part.y}) rotate(${part.rotation})`
+    });
+    const moving = svgElement<SVGGElement>('g', { class: 'moving-shape' });
+    moving.replaceChildren(...partShape(part.type));
+    group.replaceChildren(
+      svgElement<SVGCircleElement>('circle', { class: 'selection-ring', r: Math.max(43, definition.width / 2 + 9) }),
+      moving,
+      ...PARTS[part.type].ports.map((port) => svgElement<SVGCircleElement>('circle', { class: 'port', cx: port.x, cy: port.y, r: 6 }))
+    );
+    return group;
+  }));
   byId('empty-board').hidden = parts.length > 0;
   updateMotion();
 }
@@ -298,7 +282,7 @@ function addPart(type: PartType, point: { x: number; y: number }): void {
   addType = null;
   renderAll(true);
   scheduleSave();
-  window.setTimeout(() => board.querySelector<SVGGElement>(`[data-part-id="${part.id}"]`)?.focus(), 0);
+  window.setTimeout(() => partElementById(part.id)?.focus(), 0);
 }
 
 function removeSelected(): void {
@@ -319,7 +303,7 @@ function rotateSelected(): void {
   parts = parts.map((part) => part.id === selectedId ? snapPart({ ...part, rotation: (part.rotation + 45) % 360 }, parts.filter((item) => item.id !== part.id)) : part);
   renderAll(true);
   scheduleSave();
-  window.setTimeout(() => board.querySelector<SVGGElement>(`[data-part-id="${selectedId}"]`)?.focus(), 0);
+  window.setTimeout(() => selectedId && partElementById(selectedId)?.focus(), 0);
 }
 
 function svgPoint(event: { clientX: number; clientY: number }): { x: number; y: number } {
@@ -393,7 +377,7 @@ board.addEventListener('pointermove', (event) => {
   dragging.moved ||= Math.hypot(x - part.x, y - part.y) > 2;
   part.x = x;
   part.y = y;
-  board.querySelector<SVGGElement>(`[data-part-id="${part.id}"]`)?.setAttribute('transform', `translate(${x} ${y}) rotate(${part.rotation})`);
+  partElementById(part.id)?.setAttribute('transform', `translate(${x} ${y}) rotate(${part.rotation})`);
 });
 
 board.addEventListener('pointerup', () => {
@@ -425,7 +409,7 @@ board.addEventListener('keydown', (event) => {
   parts = parts.map((part) => part.id === selectedId ? snapPart({ ...part, x: part.x + move[0], y: part.y + move[1] }, parts.filter((item) => item.id !== part.id)) : part);
   renderAll(true);
   scheduleSave();
-  window.setTimeout(() => board.querySelector<SVGGElement>(`[data-part-id="${selectedId}"]`)?.focus(), 0);
+  window.setTimeout(() => selectedId && partElementById(selectedId)?.focus(), 0);
 });
 
 puzzleList.addEventListener('click', (event) => {
