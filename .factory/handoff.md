@@ -45,9 +45,9 @@ npm run preview
 Clean verification on 2026-08-27 UTC:
 
 - `npm ci`: passed; 59 packages audited, 0 vulnerabilities.
-- `npm test`: **6/6** passed (engine and exact import validation).
+- `npm test`: **8/8** passed (engine and exact import validation).
 - `npm run build`: passed; `dist/` includes the Azure Static Web Apps config.
-  Initial JS is 24.27 KB raw / 8.93 KB gzip; CSS is 13.67 KB raw / 3.68 KB
+  Initial JS is 24.29 KB raw / 8.95 KB gzip; CSS is 13.67 KB raw / 3.68 KB
   gzip, both well within budget.
 - `npm run test:e2e`: **12/12** passed across Desktop Chrome and Pixel 5.
   This covers the simulator/puzzle path, keyboard/undo/persistence, mobile
@@ -57,17 +57,25 @@ Clean verification on 2026-08-27 UTC:
   Accessibility **100**, Best Practices **100**, SEO **100**; LCP 1.5 s,
   CLS 0.035, TBT 0 ms.
 
-## Deployment
+## Deployment and live verification
 
-Deploy as Standard Azure Static Web Apps from `dist/`:
+Deployed as a Standard Azure Static Web App to
+`https://mechanism-playground.sociobot.in/` on 2026-08-27 UTC.
 
-```sh
-/opt/fleet/lib/deploy-static.sh mechanism-playground /work/repo/dist
-```
-
-After deploy, verify `https://mechanism-playground.sociobot.in/` with
-`/opt/fleet/lib/verify-url.sh` and inspect headers for CSP, immutable
-`/assets/` and `/icons/`, and no-cache `sw.js`.
+- Live `verify-url.sh`: HTTP 200 in 606 ms, zero console/page errors, correct
+  title/lang/main/one h1, zero missing image alt attributes, and zero unlabeled
+  buttons.
+- Live desktop and 390 px axe scans: zero serious or critical findings and zero
+  console/page errors.
+- Live import checks: the exact quote/event-attribute ID payload was rejected
+  without setting `data-qa-executed`; `not-a-part` showed the recovery message.
+- Live PWA check: after service-worker installation, a 390 px offline reload
+  displayed the workshop heading successfully.
+- Live headers: root HTML revalidates; the hashed JS asset returns
+  `public, max-age=31536000, immutable`; `sw.js` is no-cache/no-store; the
+  manifest is `application/manifest+json`; and the restrictive CSP is present.
+- Live mobile Lighthouse: Performance **100**, Accessibility **100**, Best
+  Practices **100**, SEO **100**; LCP 1.4 s, CLS 0.035, TBT 0 ms.
 
 ## Known limits
 
