@@ -128,3 +128,24 @@ test('rejects an unknown imported type and leaves the current machine usable', a
   await expect(page.getByRole('button', { name: /Pause/ })).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
+
+test('explains malformed blueprint JSON and preserves the current machine', async ({ page }) => {
+  const pageErrors: Error[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error));
+  await page.goto('/');
+  await page.getByRole('button', { name: /Puzzle 1: First turn/ }).click();
+  await expect(page.locator('#parts-layer .mechanism-part')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Blueprint file' }).click();
+  await page.locator('#import-file').setInputFiles({
+    name: 'broken-blueprint.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from('{not JSON')
+  });
+
+  await expect(page.locator('#file-error')).toHaveText(
+    'This file is not valid JSON. Export a fresh blueprint or choose a valid JSON file and try again.'
+  );
+  await expect(page.locator('#file-dialog')).toBeVisible();
+  await expect(page.locator('#parts-layer .mechanism-part')).toHaveCount(2);
+  expect(pageErrors).toEqual([]);
+});

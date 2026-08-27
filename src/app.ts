@@ -50,6 +50,7 @@ const symbolFor: Record<PartType, string> = {
   linkage: '╱', lever: '⌁', slider: '↔', pulley: '◎', bell: '♢'
 };
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
+const INVALID_JSON_BLUEPRINT_MESSAGE = 'This file is not valid JSON. Export a fresh blueprint or choose a valid JSON file and try again.';
 
 function svgElement<T extends SVGElement>(name: string, attributes: Record<string, string | number> = {}): T {
   const element = document.createElementNS(SVG_NAMESPACE, name) as T;
@@ -484,7 +485,12 @@ byId('import-file').addEventListener('change', async (event) => {
     fileDialog.close();
     announce(`Imported ${parts.length} parts from ${file.name}.`);
   } catch (error) {
-    byId('file-error').textContent = error instanceof Error ? error.message : 'This blueprint could not be opened.';
+    // JSON.parse diagnostics vary by browser and are written for developers.
+    // Keep format failures distinct from our validation errors, which already
+    // explain how a player can recover.
+    byId('file-error').textContent = error instanceof SyntaxError
+      ? INVALID_JSON_BLUEPRINT_MESSAGE
+      : error instanceof Error ? error.message : 'This blueprint could not be opened.';
   }
   (event.target as HTMLInputElement).value = '';
 });
