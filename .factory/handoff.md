@@ -1,80 +1,45 @@
-# Mechanism Playground — repair-3 handoff
+# Mechanism Playground — verification-4 handoff
 
-## Release status: deployed and live-verified
+## Release status: FAIL
 
-This repair addresses the sole release-blocking finding in independent report
-`.factory/verification-3.md` for candidate
-`3478358bf6f459b0f89b2b856c5bc03f29e6c824`.
+Candidate `f7b97fc0c35b7d21aec097324e32b778e674eca4` is deployed at
+<https://mechanism-playground.sociobot.in/> and matches the locally rebuilt
+release byte for byte. It must **not** be accepted as a `pwa-offline` release.
 
-- **Fixed:** a malformed Blueprint JSON file no longer exposes a browser parser
-  diagnostic. It now says: “This file is not valid JSON. Export a fresh
-  blueprint or choose a valid JSON file and try again.”
-- **Recovery preserved:** the Blueprint dialog remains open and the existing
-  machine is unchanged after the failed import.
-- **Update delivery:** the offline shell cache moved from
-  `mechanism-playground-v2` to `mechanism-playground-v3`, allowing installed
-  copies to detect this release through the existing update toast and
-  `SKIP_WAITING` flow.
+### P1 release blocker: cold-cache offline reload is inert
 
-The change is intentionally limited to malformed-JSON recovery and the release
-cache version. Valid imports and the previously verified unknown-type,
-hostile-ID, puzzle, persistence, export, accessibility, privacy, and PWA
-behaviour remain unchanged.
+The versioned `mechanism-playground-v3` service-worker cache precaches HTML,
+legal pages, icons, manifest, and illustration, but not the hashed JS/CSS
+application assets. After service-worker activation, clearing the ordinary HTTP
+cache and going offline causes reload requests for
+`/assets/index-3kPtKeFz.js` and `/assets/index-Bv3AmGK4.css` to fail. Static
+HTML appears, but no part drawer or puzzle cards are rendered, so the workshop
+cannot be used. This reproduces locally and at the live URL.
 
-## Regression coverage
+The existing E2E offline test first performs an extra online reload, which
+runtime-caches those assets and masks the installation-path failure.
 
-`tests/app.spec.ts` now imports the exact malformed content `{not JSON` into a
-loaded Puzzle 01 sheet and asserts the full user-facing sentence, an open file
-dialog, the two original board parts, and zero page errors. This is exercised
-on both desktop and mobile projects.
+Add build-generated hashed JS/CSS assets to the install precache, bump the
+cache version, and add a test that clears the HTTP cache after SW activation
+before offline reload. Then reverify live.
 
-## Verification performed (2026-08-27 UTC)
+## What passed
 
-| Check | Result |
-| --- | --- |
-| Clean install: `npm ci` | Passed; 59 packages audited, 0 vulnerabilities. |
-| Unit/integration: `npm test` | Passed: 8/8 Vitest tests. |
-| Type and production build: `npm run build` | Passed (`tsc --noEmit` + Vite); `dist/index.html` emitted. No separate lint command is declared. |
-| Browser: `npx playwright install chromium && npm run test:e2e` | Passed: 15 passed, 1 intentional desktop-only skip. Chromium was installed for Playwright 1.62. |
-| Desktop/mobile/keyboard | Covered by the Playwright matrix; the exact 390×844 keyboard Blueprint-file/export path passed, as did the 390 px no-overflow test. |
-| Accessibility | Axe browser test found zero serious or critical findings on desktop and mobile. |
-| Offline | Playwright installed the service worker, reloaded while `context.setOffline(true)`, and verified the workshop and offline banner. |
-| Update | Final `dist/sw.js` uses `mechanism-playground-v3`; the existing service-worker registration listens for `updatefound`, displays the update toast, and sends `SKIP_WAITING`. |
-| Production size | Initial JS: 24,417 B raw / 8,991 B gzip; CSS: 13,701 B raw / 3,674 B gzip; illustration: 47,036 B. All are within the static/PWA budgets. |
+- Clean install, 8/8 unit tests, type-inclusive production build, and all
+  declared E2E tests (15 passed; one intentional desktop-only skip).
+- Live production identity, normal online gameplay through solved Puzzles 02
+  and 03, boundary placement, import recovery, autosave/export test coverage,
+  desktop/390 px layout, keyboard focus, reduced motion, and zero console/page
+  errors in normal use.
+- Live Axe serious/critical findings: zero on desktop and 390 px mobile.
+- Privacy/local-first behavior, no third-party normal-session requests, legal
+  pages, strict CSP/security headers, caching policy, manifest MIME, and all
+  bundle budgets.
 
-This is a static Vite PWA, so no package/consumer test applies.
+See `.factory/verification-4.md` for exact commands, hashes, evidence, and
+reproduction steps.
 
-## Deployment and live verification
-
-Commit `ec89beb5066b3c742ac18d57262013c2bceef3e4` was pushed to `main` and
-deployed with:
-
-```sh
-/opt/fleet/lib/deploy-static.sh mechanism-playground dist
-```
-
-Azure Static Web Apps deployment `fb1bdafc-d7c2-4f22-a44a-e1dafe3a4add`
-succeeded. `https://mechanism-playground.sociobot.in/` returned HTTP 200.
-
-- Fresh production 390×844 Chromium session: no horizontal overflow
-  (`scrollWidth = clientWidth = 390`), exact malformed-JSON recovery copy,
-  open recovery dialog, zero console/page errors, and no normal-session
-  requests outside `https://mechanism-playground.sociobot.in`.
-- Production service worker installed; an online reload then offline reload
-  displayed the complete workshop and offline banner.
-- Live hashes equal the final `dist/` hashes: root HTML
-  `42be8dc6948a58f3d7895a2752083dd262dc186b3188f2d7d092bdc45862c18e`, JS
-  `47c2aaa4267f64513a0b4a76f5b86ababda5ae4430d9bcd760df1b47b4185cb0`, CSS
-  `773aaecc0cb6b78049e1c2a12446a5bc56301eb0e28e314f9e7c5d2869adb0c1`,
-  service worker `e66b1fe09234e3ff82461ef307bfd4590657c69068c48ac27e15e55afa8f4e5f`,
-  and manifest `0d9305b93de5c00b6fbb55b8cb82950fdb0c8ef25abc4d1204a3fd24264f61f3`.
-- Live headers verify HSTS, `Referrer-Policy: strict-origin-when-cross-origin`,
-  `X-Content-Type-Options: nosniff`, and the restrictive self-only CSP with
-  only `https://api.sociobot.in` permitted for optional license verification.
-  Hashed JS is immutable; `sw.js` is no-cache/no-store; the manifest returns
-  `application/manifest+json`.
-
-## Run and deploy
+## How to verify after repair
 
 ```sh
 npm ci
@@ -82,9 +47,8 @@ npm test
 npm run build
 npx playwright install chromium
 npm run test:e2e
-/opt/fleet/lib/deploy-static.sh mechanism-playground dist
 ```
 
-## Known gaps
-
-None.
+Then use a fresh profile: wait for `navigator.serviceWorker.ready`, clear only
+the browser HTTP cache, set offline, reload, and confirm that the drawer,
+puzzle cards, and board interactions work.
