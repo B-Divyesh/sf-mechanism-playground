@@ -1,66 +1,29 @@
-# Mechanism Playground — repair-2 handoff
+# Mechanism Playground — verification-3 handoff
 
-## Release status
+## Release status: FAIL
 
-This repair resolves both findings in independent verifier report
-`07263c1e2bf5df14b57acfc3245275dbc6861bbe` for candidate `ff07db21`.
-Repair commit `c31a8d7962ac450fa0517dfb02e0720c924fd639` was pushed and its
-verified `dist/` output was deployed as Standard static.
+Candidate `3478358bf6f459b0f89b2b856c5bc03f29e6c824` was independently verified against <https://mechanism-playground.sociobot.in/> on 2026-08-27 UTC. Production is byte-for-byte the candidate build for root HTML, hashed CSS/JS, service worker, and manifest.
 
-## What changed
+**Do not mark this candidate released yet.** Its only finding is low severity, but it is an acceptance-contract failure: malformed Blueprint JSON presents raw parser jargon without a plain-language recovery instruction. Full evidence and reproduction are in `.factory/verification-3.md`.
 
-- At 390 px, the top bar now retains a visible **Blueprint file** button
-  rather than reducing it to an ambiguous icon. It remains a 44 px-or-larger
-  touch target, accepts keyboard focus, and opens the local import/export
-  dialog with Enter.
-- Added a Pixel 5 / exact 390 px keyboard regression: Tab reaches Blueprint
-  file, Enter opens the dialog, and Enter on Export downloads a dated JSON
-  blueprint. The existing malicious-ID and unsupported-type import recovery
-  regressions continue to run in the mobile project.
-- The pre-existing import hardening remains in place: part IDs/types are
-  validated before state mutation and imported SVG uses DOM APIs rather than
-  markup concatenation.
+## What passed
 
-## Run and verify
+- `npm ci`, 8/8 unit tests, TypeScript production build, and 13 e2e tests passed (one intentional desktop skip). Chromium was installed explicitly to match the repository Playwright revision.
+- Three representative free puzzle chains solved, saved, and reloaded; boundary placement, crank/slow motion, export, keyboard operation, unknown-type recovery, and hostile-ID/XSS rejection passed.
+- Desktop and 390 px mobile had no console/page errors or axe serious/critical findings. Mobile had no overflow, a visible 3 px focus ring, and keyboard access to Blueprint file. Reduced motion starts paused.
+- The installed service worker completed an offline reload; privacy checks found only same-origin normal-session requests; CSP, HSTS, nosniff, referrer policy, immutable hashed-asset caching, and PWA headers are deployed correctly.
+- Fresh output remains within budgets: 24.3 KB JS raw (9.0 KB gzip), 13.7 KB CSS raw (3.7 KB gzip), and 47.0 KB illustration.
+
+## Required next step
+
+Make malformed JSON import copy say plainly that the file is invalid JSON and how to recover, add an automated assertion, then rebuild/redeploy and rerun the focused QA plus:
 
 ```sh
 npm ci
 npm test
 npm run build
+npx playwright install chromium
 npm run test:e2e
 ```
 
-Clean verification on 2026-08-27 UTC:
-
-- `npm ci`: passed; 59 packages audited, 0 vulnerabilities.
-- `npm test`: **8/8** passed.
-- `npm run build`: passed. The emitted initial JS is 24.29 KB raw / 8.95 KB
-  gzip and CSS is 13.70 KB raw / 3.67 KB gzip.
-- `npm run test:e2e`: **13 passed, 1 intentionally skipped**. The skipped
-  instance is the desktop copy of the mobile-only keyboard regression. The
-  suite covers desktop/mobile browser smoke, 390 px overflow, axe
-  serious/critical findings, keyboard export, hostile and unknown-part import
-  recovery, persistence, and service-worker offline reload.
-
-## Deployment identity and PWA
-
-The target Standard Azure Static Web App is `sf-mechanism-playground`
-(`mechanism-playground.sociobot.in`). The live custom domain and Azure default
-hostname both match local `dist/index.html` SHA-256
-`b3f70a8a3f7180bdfa132b7506ccb2af43fc007beacb41e2a1e356a5bceba8be`
-and reference the same assets: `index-Bv3AmGK4.css` and
-`index-oX4eCrPy.js`. Those two public assets also match the local build
-byte-for-byte. This is the identity check that prevents the earlier
-concurrent-deployment mismatch.
-
-Live Pixel 5 / 390 px smoke confirmed `lang=en`, one h1, main landmark, no
-horizontal overflow, zero browser errors, zero axe serious/critical findings,
-Tab/Enter access to Blueprint file, and an installed service-worker offline
-reload. `sw.js` is no-cache/no-store, while hashed assets are immutable.
-
-## Known limits
-
-The deterministic model teaches motion paths; it deliberately omits physical
-force, collision, stress, CAD export, multiplayer, and markets. Billing
-registration/return URL configuration remains a factory deployment task; no
-payment secret is committed.
+No product source was modified by this verification; only this handoff and `.factory/verification-3.md` were added/updated.
