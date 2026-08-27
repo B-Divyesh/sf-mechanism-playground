@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mechanism-playground.sociobot.in/sitemap.xml
