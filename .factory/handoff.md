@@ -1,5 +1,18 @@
 # Mechanism Playground — build handoff
 
+## Independent verification release gate (2026-08-27 UTC): **FAIL**
+
+Candidate `9513ff036eb485b16571d6c9feacb8f006fa9466` was independently tested
+against https://mechanism-playground.sociobot.in/ from a clean checkout. The
+deployment byte-matches the fresh build, and build/unit/E2E/accessibility/PWA
+smoke/performance checks otherwise passed. It is nevertheless **not releasable**:
+the advertised JSON blueprint importer permits DOM XSS through an unescaped
+part ID (high severity), and accepts unknown part types that produce a technical
+render error (medium severity). Production also lacks immutable asset caching
+(low severity). See `.factory/verification-1.md` for reproduction, exact
+evidence, headers, checks, and required remediation. This verdict supersedes
+the builder's verification notes below.
+
 ## Shipped
 
 - A complete responsive 2D mechanism workbench with ten primitives: hand crank,
