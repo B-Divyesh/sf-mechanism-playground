@@ -75,7 +75,7 @@ test('rejects a quote-containing imported ID before it can become SVG markup', a
     type: 'gearSmall', x: 182, y: 248, rotation: 0
   }, 'quoted-id.json'));
 
-  await expect(page.locator('#file-error')).toContainText('invalid part ID');
+  await expect(page.locator('#file-error')).toContainText('unsupported characters');
   await expect(page.locator('#file-dialog')).toBeVisible();
   await expect(page.locator('#parts-layer .mechanism-part')).toHaveCount(0);
   await expect(page.locator('body')).not.toHaveAttribute('data-qa-executed', 'yes');
@@ -93,7 +93,7 @@ test('rejects an unknown imported type and leaves the current machine usable', a
     id: 'unknown-type-01', type: 'not-a-part', x: 182, y: 248, rotation: 0
   }, 'unknown-type.json'));
 
-  await expect(page.locator('#file-error')).toContainText('does not recognize');
+  await expect(page.locator('#file-error')).toContainText('unsupported part type');
   await expect(page.locator('#file-dialog')).toBeVisible();
   await expect(page.locator('#parts-layer .mechanism-part')).toHaveCount(2);
   await page.getByRole('button', { name: 'Close blueprint file options' }).click();

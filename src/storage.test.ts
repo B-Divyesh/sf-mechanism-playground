@@ -21,7 +21,7 @@ describe('blueprint import validation', () => {
       parts: [{ ...validBlueprint.parts[0], id: 'gear" onclick="document.body.dataset.qaExecuted=\'yes\'' }]
     };
 
-    expect(() => validatePlayground(malicious)).toThrow('invalid part ID');
+    expect(() => validatePlayground(malicious)).toThrow('unsupported characters');
   });
 
   it('rejects an unknown type before the board can render it', () => {
@@ -30,6 +30,6 @@ describe('blueprint import validation', () => {
       parts: [{ ...validBlueprint.parts[0], type: 'not-a-part' }]
     };
 
-    expect(() => validatePlayground(unknown)).toThrow('does not recognize');
+    expect(() => validatePlayground(unknown)).toThrow('unsupported part type');
   });
 });

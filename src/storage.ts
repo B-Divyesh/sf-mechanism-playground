@@ -78,10 +78,10 @@ export function validatePlayground(value: unknown): SavedPlayground {
       throw new Error('A part in this blueprint is damaged.');
     }
     if (!PART_ID.test(part.id) || ids.has(part.id)) {
-      throw new Error('This blueprint has an invalid part ID. Export a fresh copy from Mechanism Playground and try again.');
+      throw new Error('This blueprint part ID contains unsupported characters or is duplicated. Export a fresh copy from Mechanism Playground and try again.');
     }
     if (!isPartType(part.type)) {
-      throw new Error('This blueprint contains a part this workshop does not recognize. Choose a blueprint exported by Mechanism Playground and try again.');
+      throw new Error('This blueprint contains an unsupported part type. Choose a blueprint exported by Mechanism Playground and try again.');
     }
     ids.add(part.id);
     parts.push({ id: part.id, type: part.type, x: part.x, y: part.y, rotation: part.rotation });
