@@ -78,6 +78,13 @@ Verification on 2026-08-27:
 - Build output contains both supported Standard-static cache configurations and
   the v2 worker. Initial JS is 24.08 KB raw / 8.87 KB gzip; CSS is 13.59 KB raw /
   3.65 KB gzip; the 47 KB onboarding WebP remains below all budgets.
+- Standard Static deployment completed from commit `d3392c1`. Live production
+  serves the repaired hashed bundle, `Cache-Control: public, max-age=31536000,
+  immutable` for `/assets/*`, `Cache-Control: no-cache` for `sw.js`, CSP, and
+  `application/manifest+json` for the manifest.
+- Live 390 px Chromium smoke: HTTP 200, expected title/`lang`/one `h1`/`main`,
+  no horizontal overflow, zero console or page errors, zero axe serious/critical
+  findings, service-worker control, and a successful offline reload.
 
 ## Known gaps and release notes
 
@@ -88,9 +95,7 @@ Verification on 2026-08-27:
   force, torque, material stress, CAD export, multiplayer, and user markets, as
   required by the brief. The UI and terms explicitly say it is not engineering
   software.
-- Real-user Core Web Vitals are unavailable before deployment. The recorded
-  values are local test results; run the normal factory live probe after the
-  Standard static publish completes to record the final response headers and
-  Lighthouse scores.
+- Real-user Core Web Vitals are unavailable before deployment. The checked
+  local and live browser results are synthetic checks, not field telemetry.
 
 No infrastructure, DNS, billing registration, or secrets were changed.
