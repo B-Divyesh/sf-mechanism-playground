@@ -39,7 +39,15 @@ export async function initializeLicense(onChange: (state: LicenseState) => void)
   }
   const cached = readVerdict();
   const optimistic = cached ? cached.valid : true;
-  const initial = { unlocked: optimistic, checking: !cached || Date.now() - cached.checkedAt >= DAY, token };
+  // Preserve an invalid cached verdict on later launches. The app must stay
+  // locked and quietly explain why even when the once-per-day network check is
+  // deliberately skipped.
+  const initial = {
+    unlocked: optimistic,
+    checking: !cached || Date.now() - cached.checkedAt >= DAY,
+    reason: cached && !cached.valid ? cached.reason ?? 'invalid' : undefined,
+    token
+  };
   onChange(initial);
   if (cached && Date.now() - cached.checkedAt < DAY) return initial;
   try {

@@ -36,7 +36,7 @@
             <div><span class="index-mark">01</span><h2 id="parts-title">Parts drawer</h2></div>
             <button id="clear-button" class="quiet-button" type="button">Clear</button>
           </div>
-          <p class="panel-note">Choose a part, then tap the sheet. Drag parts to join their round ports.</p>
+          <p class="panel-note">Choose a part, then tap the sheet or use the sheet marker. Drag parts to join their round ports.</p>
           <div id="parts-list" class="parts-list" role="group" aria-label="Mechanism parts"></div>
         </aside>
 
@@ -55,10 +55,14 @@
             </div>
           </div>
           <div class="board-wrap">
-            <svg id="board" class="board" viewBox="0 0 800 500" role="application" aria-label="Mechanism drawing sheet. Select a part and use arrow keys to move it, R to rotate, and Delete to remove it.">
+            <svg id="board" class="board" viewBox="0 0 800 500" role="application" tabindex="0" aria-label="Mechanism drawing sheet. Select a part, then use arrow keys to move its placement marker and Enter or Space to place it. Focus a placed part and use arrow keys to move it, R to rotate it, or Delete to remove it.">
               <rect class="board-hitbox" width="800" height="500" fill="transparent" />
               <g id="connections-layer"></g>
               <g id="parts-layer"></g>
+              <g id="keyboard-cursor" class="placement-cursor" aria-hidden="true" hidden>
+                <circle r="18"></circle>
+                <path d="M-28 0H-8 M8 0H28 M0-28V-8 M0 8V28"></path>
+              </g>
             </svg>
             <div id="empty-board" class="empty-board">
               <span class="empty-compass" aria-hidden="true">⌖</span>
@@ -117,7 +121,7 @@
             <li><strong>Place</strong> it on the sheet and touch round ports together.</li>
             <li><strong>Turn</strong> the crank. Mint outlines show every powered part.</li>
           </ol>
-          <p>Keyboard: arrow keys nudge, <kbd>R</kbd> rotates, <kbd>Delete</kbd> removes, and <kbd>Space</kbd> starts or pauses.</p>
+          <p>Keyboard: choose a part, then on the sheet use arrows to move its marker and <kbd>Enter</kbd> to place. Focus a part to nudge it with arrows, <kbd>R</kbd> to rotate, <kbd>Delete</kbd> to remove, and <kbd>Space</kbd> to start or pause.</p>
           <div class="dialog-actions">
             <button id="guide-start-button" class="primary-button" type="button">Start Puzzle 01</button>
             <button data-close-dialog class="quiet-button" type="button">Build freely</button>

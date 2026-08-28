@@ -38,6 +38,40 @@ test('builds and persists a solved first mechanism', async ({ page }) => {
   await expect(page.locator('#puzzle-status')).toContainText('Solved');
 });
 
+test('solves Puzzle 01 and selects placed mechanisms with keyboard only', async ({ page }) => {
+  await page.goto('/');
+
+  // Native buttons remain keyboard-operable; do not use a pointer action in
+  // this flow. Start the puzzle, choose its gear, then move the sheet marker.
+  await page.getByRole('button', { name: /Puzzle 1: First turn/ }).focus();
+  await page.keyboard.press('Enter');
+  await page.getByRole('button', { name: /Small gear/ }).focus();
+  await page.keyboard.press('Enter');
+
+  const board = page.locator('#board');
+  // Choosing a drawer part transfers keyboard focus to the sheet, making the
+  // primary select → place workflow one continuous keyboard path.
+  await expect(board).toBeFocused();
+  await expect(board).toHaveAttribute('tabindex', '0');
+  await expect(board).toHaveAttribute('aria-label', /Small gear is ready/);
+  // The marker starts in the sheet centre (400, 248). Seven 32-unit moves
+  // reach the crank/bell snap point at x=176 without a pointer.
+  for (let move = 0; move < 7; move += 1) await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('#selection-info')).toContainText('176, 248');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#puzzle-status')).toContainText('Solved');
+
+  // Enter/Space select the focused SVG button itself, so subsequent commands
+  // cannot accidentally change a previously selected mechanism.
+  const crank = page.getByRole('button', { name: /Hand crank, at/ });
+  await crank.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#selection-info')).toContainText('Hand crank');
+  await page.keyboard.press('r');
+  await expect(page.locator('#selection-info')).toContainText('Hand crank');
+  await expect(page.locator('#selection-info')).toContainText('45°');
+});
+
 test('has no serious accessibility violations', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('h1')).toHaveCount(1);
@@ -162,4 +196,21 @@ test('explains malformed blueprint JSON and preserves the current machine', asyn
   await expect(page.locator('#file-dialog')).toBeVisible();
   await expect(page.locator('#parts-layer .mechanism-part')).toHaveCount(2);
   expect(pageErrors).toEqual([]);
+});
+
+test('keeps the inactive-license notice after a cached invalid verdict', async ({ page }) => {
+  let verifyCalls = 0;
+  await page.addInitScript(() => localStorage.setItem('sb_license:mechanism-playground', 'invalid-test-license'));
+  await page.route('https://api.sociobot.in/api/v1/products/mechanism-playground/verify?license=invalid-test-license', async (route) => {
+    verifyCalls += 1;
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ valid: false, reason: 'invalid' }) });
+  });
+
+  await page.goto('/');
+  await expect.poll(() => verifyCalls).toBe(1);
+  await expect(page.locator('#license-status')).toHaveText('This license is no longer active. You can purchase another copy above.');
+
+  await page.reload();
+  await expect.poll(() => verifyCalls).toBe(1);
+  await expect(page.locator('#license-status')).toHaveText('This license is no longer active. You can purchase another copy above.');
 });

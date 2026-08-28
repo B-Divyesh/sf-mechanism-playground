@@ -44,6 +44,9 @@ let saveTimer = 0;
 let toastTimer = 0;
 let dragging: { id: string; offsetX: number; offsetY: number; moved: boolean } | null = null;
 let license: LicenseState = { unlocked: false, checking: false };
+// The drawing sheet has its own placement marker so selecting a drawer part
+// does not leave keyboard players dependent on a pointer coordinate.
+let keyboardPoint = { x: 400, y: 248 };
 
 const symbolFor: Record<PartType, string> = {
   crank: '↻', gearLarge: '⚙', gearSmall: '⚙', cam: '◒', follower: '↕',
@@ -158,7 +161,19 @@ function renderBoard(): void {
     return group;
   }));
   byId('empty-board').hidden = parts.length > 0;
+  renderPlacementCursor();
   updateMotion();
+}
+
+function renderPlacementCursor(): void {
+  const cursor = byId<SVGGElement>('keyboard-cursor');
+  const ready = addType !== null;
+  cursor.toggleAttribute('hidden', !ready);
+  cursor.setAttribute('transform', `translate(${keyboardPoint.x} ${keyboardPoint.y})`);
+  board.classList.toggle('adding', ready);
+  board.setAttribute('aria-label', ready
+    ? `Mechanism drawing sheet. ${PARTS[addType!].label} is ready at ${Math.round(keyboardPoint.x)}, ${Math.round(keyboardPoint.y)}. Use arrow keys to move the placement marker, then Enter or Space to place it. Escape cancels placement.`
+    : 'Mechanism drawing sheet. Select a part, then use arrow keys to move its placement marker and Enter or Space to place it. Focus a placed part and use arrow keys to move it, R to rotate it, or Delete to remove it.');
 }
 
 function renderPalette(): void {
@@ -168,7 +183,7 @@ function renderPalette(): void {
       <strong>${definition.label}</strong><span>${definition.hint}</span>
     </button>`;
   }).join('');
-  board.classList.toggle('adding', addType !== null);
+  renderPlacementCursor();
 }
 
 function renderPuzzles(): void {
@@ -189,7 +204,7 @@ function renderInspector(): void {
   const selected = parts.find((part) => part.id === selectedId);
   byId('selection-info').textContent = selected
     ? `${PARTS[selected.type].label} · ${Math.round(selected.x)}, ${Math.round(selected.y)} · ${selected.rotation}°`
-    : addType ? `${PARTS[addType].label} ready — tap the sheet` : 'No part selected';
+    : addType ? `${PARTS[addType].label} ready at ${Math.round(keyboardPoint.x)}, ${Math.round(keyboardPoint.y)} — use arrows, then Enter to place` : 'No part selected';
   byId<HTMLButtonElement>('rotate-button').disabled = !selected;
   byId<HTMLButtonElement>('delete-button').disabled = !selected;
   byId('board-mode').textContent = activePuzzle() ? `Puzzle ${String(activePuzzle()!.number).padStart(2, '0')} · ${activePuzzle()!.name}` : 'Free build';
@@ -307,6 +322,26 @@ function rotateSelected(): void {
   window.setTimeout(() => selectedId && partElementById(selectedId)?.focus(), 0);
 }
 
+function selectPlacedPart(id: string): void {
+  const part = parts.find((item) => item.id === id);
+  if (!part) return;
+  selectedId = id;
+  addType = null;
+  document.querySelectorAll<SVGGElement>('.mechanism-part.selected').forEach((element) => element.classList.remove('selected'));
+  partElementById(id)?.classList.add('selected');
+  renderPalette();
+  renderInspector();
+}
+
+function movePlacementCursor(deltaX: number, deltaY: number): void {
+  keyboardPoint = {
+    x: Math.max(58, Math.min(742, keyboardPoint.x + deltaX)),
+    y: Math.max(55, Math.min(445, keyboardPoint.y + deltaY))
+  };
+  renderPlacementCursor();
+  renderInspector();
+}
+
 function svgPoint(event: { clientX: number; clientY: number }): { x: number; y: number } {
   const rect = board.getBoundingClientRect();
   return { x: ((event.clientX - rect.left) / rect.width) * 800, y: ((event.clientY - rect.top) / rect.height) * 500 };
@@ -335,7 +370,10 @@ partsList.addEventListener('click', (event) => {
   selectedId = null;
   renderPalette();
   renderInspector();
-  announce(`${PARTS[addType].label} selected. Tap the drawing sheet to place it.`);
+  // Put keyboard players directly on the next step of the workflow. Pointer
+  // users can still click or drag on the sheet as usual.
+  board.focus({ preventScroll: true });
+  announce(`${PARTS[addType].label} selected. Tap the drawing sheet, or focus it and press Enter to place the marker.`);
 });
 
 partsList.addEventListener('dragstart', (event) => {
@@ -399,6 +437,38 @@ board.addEventListener('click', (event) => {
 });
 
 board.addEventListener('keydown', (event) => {
+  const focusedPart = (event.target as Element).closest<SVGGElement>('[data-part-id]');
+  if (focusedPart) {
+    const id = focusedPart.dataset.partId!;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      event.stopPropagation();
+      selectPlacedPart(id);
+      announce(`${PARTS[parts.find((part) => part.id === id)!.type].label} selected. Use arrows to move it, R to rotate, or Delete to remove it.`);
+      return;
+    }
+    // Commands on a focused mechanism always apply to that mechanism, even
+    // when another part had been selected earlier with the pointer.
+    if (selectedId !== id) selectPlacedPart(id);
+  }
+
+  if (addType) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      event.stopPropagation();
+      addPart(addType, keyboardPoint);
+      return;
+    }
+    const placementMoves: Record<string, [number, number]> = {
+      ArrowLeft: [-32, 0], ArrowRight: [32, 0], ArrowUp: [0, -32], ArrowDown: [0, 32]
+    };
+    const placementMove = placementMoves[event.key];
+    if (placementMove) {
+      event.preventDefault();
+      movePlacementCursor(...placementMove);
+    }
+    return;
+  }
   if (!selectedId) return;
   if (event.key === 'Delete' || event.key === 'Backspace') { event.preventDefault(); removeSelected(); return; }
   if (event.key.toLowerCase() === 'r') { event.preventDefault(); rotateSelected(); return; }

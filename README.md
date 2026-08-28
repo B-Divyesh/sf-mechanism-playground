@@ -34,8 +34,10 @@ npm run test:e2e    # Chromium; run `npx playwright install chromium` once
 
 ## Controls
 
-- Choose a drawer part and tap/click the drawing sheet, or drag it onto the
-  sheet. Nearby round ports snap together.
+- Choose a drawer part and tap/click the drawing sheet, drag it onto the
+  sheet, or use the keyboard placement marker: focus the sheet, use the arrow
+  keys to move the marker, then press `Enter` or `Space` to place it. Nearby
+  round ports snap together.
 - Drag a placed part, or focus it and use arrow keys to nudge. Press `R` to
   rotate, `Delete` to remove, `Space` to run/pause, and use Undo to reverse a
   board change.
