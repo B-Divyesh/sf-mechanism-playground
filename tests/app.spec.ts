@@ -80,14 +80,28 @@ test('keeps Blueprint file import and export on the 390px keyboard path', async 
   await expect((await download).suggestedFilename()).toMatch(/^mechanism-blueprint-\d{4}-\d{2}-\d{2}\.json$/);
 });
 
-test('reloads the full workshop offline after installation', async ({ page, context }) => {
+test('precaches the full workshop for a cold-cache offline reload after installation', async ({ page, context }) => {
   await page.goto('/');
   await page.evaluate(() => navigator.serviceWorker.ready);
-  await page.reload();
-  await expect(page.getByRole('heading', { name: 'Mechanism Playground' })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+
+  // The initial page load may have populated Chromium's normal HTTP cache.
+  // Clear only that cache while keeping Cache Storage: this proves install-time
+  // precaching includes the final hashed JS and CSS bundles.
+  const client = await context.newCDPSession(page);
+  await client.send('Network.enable');
+  await client.send('Network.clearBrowserCache');
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Mechanism Playground' })).toBeVisible();
+  await expect(page.locator('.part-tool')).toHaveCount(10);
+  await expect(page.locator('.puzzle-card')).toHaveCount(10);
+  await page.getByRole('button', { name: /Small gear/ }).click();
+  const board = page.locator('#board');
+  const box = await board.boundingBox();
+  if (!box) throw new Error('Board was not visible offline');
+  await board.click({ position: { x: box.width / 2, y: box.height / 2 } });
+  await expect(page.getByRole('button', { name: /Small gear, at/ })).toBeVisible();
   await page.evaluate(() => dispatchEvent(new Event('offline')));
   await expect(page.locator('#offline-banner')).toBeVisible();
 });

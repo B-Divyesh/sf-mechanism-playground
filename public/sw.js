@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'mechanism-playground-v3';
+const CACHE_VERSION = '__CACHE_VERSION__';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -9,7 +9,8 @@ const APP_SHELL = [
   '/assets/crank-machine.webp',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
-  '/icons/icon-maskable-512.png'
+  '/icons/icon-maskable-512.png',
+  __PRECACHE_APP_ASSETS__
 ];
 
 self.addEventListener('install', (event) => {
@@ -34,15 +35,19 @@ async function networkFirst(request) {
     if (response.ok) cache.put(request, response.clone());
     return response;
   } catch {
-    return (await cache.match(request)) || (await cache.match('/offline.html'));
+    return (await cache.match(request, { ignoreVary: true })) || (await cache.match('/offline.html'));
   }
 }
 
 async function cacheFirst(request) {
-  const cached = await caches.match(request);
+  const cache = await caches.open(CACHE_VERSION);
+  // The build host may add Vary: Origin. Install-time requests and browser
+  // module/style requests can differ only by that header, while this
+  // same-origin, versioned cache is still the authoritative asset source.
+  const cached = await cache.match(request, { ignoreVary: true });
   if (cached) return cached;
   const response = await fetch(request);
-  if (response.ok) (await caches.open(CACHE_VERSION)).put(request, response.clone());
+  if (response.ok) cache.put(request, response.clone());
   return response;
 }
 
