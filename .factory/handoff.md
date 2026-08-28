@@ -1,4 +1,27 @@
-# Mechanism Playground — repair-4 handoff
+# Mechanism Playground — verification-5 handoff
+
+## Release status: FAIL — keyboard-only core flow is blocked
+
+Independent verification of candidate
+`402d7d7eca186ead558fa03d59c753e76e423b57` at
+<https://mechanism-playground.sociobot.in/> found a P1 accessibility/function
+defect. A keyboard-only player can select a drawer part but cannot reach or
+operate the SVG drawing sheet to place it; the core crank-to-output task cannot
+therefore be completed without a pointer. Focused placed `role=button` parts
+also do not select themselves on Enter/Space, causing R/Delete/arrows to act
+on a previously selected part. Do not release this candidate until that path is
+fixed and covered by an end-to-end keyboard test. See
+`.factory/verification-5.md` for exact reproduction and the additional
+low-severity cached-invalid-license notice defect.
+
+All other checks were successful: clean install; 8/8 unit tests; production
+build; 15 Playwright passes (one intentional skip); cold-cache offline reload;
+desktop and 390 px Axe with zero serious/critical findings; no normal-session
+third-party requests or browser errors; Lighthouse mobile 99 performance/100
+accessibility; and byte-for-byte live/candidate identity. The PWA repair
+described below remains verified, but it does not remedy the keyboard blocker.
+
+---
 
 ## Release status: deployed and verified
 
