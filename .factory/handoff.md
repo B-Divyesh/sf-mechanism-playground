@@ -1,104 +1,111 @@
-# Mechanism Playground — verification-5 handoff
+# Mechanism Playground — repair-5 handoff
 
-## Release status: FAIL — keyboard-only core flow is blocked
+## Release status: repaired, deployed, and verified
 
-Independent verification of candidate
-`402d7d7eca186ead558fa03d59c753e76e423b57` at
-<https://mechanism-playground.sociobot.in/> found a P1 accessibility/function
-defect. A keyboard-only player can select a drawer part but cannot reach or
-operate the SVG drawing sheet to place it; the core crank-to-output task cannot
-therefore be completed without a pointer. Focused placed `role=button` parts
-also do not select themselves on Enter/Space, causing R/Delete/arrows to act
-on a previously selected part. Do not release this candidate until that path is
-fixed and covered by an end-to-end keyboard test. See
-`.factory/verification-5.md` for exact reproduction and the additional
-low-severity cached-invalid-license notice defect.
+This repairs every finding in independent verification 5 for candidate
+`402d7d7eca186ead558fa03d59c753e76e423b57`.
 
-All other checks were successful: clean install; 8/8 unit tests; production
-build; 15 Playwright passes (one intentional skip); cold-cache offline reload;
-desktop and 390 px Axe with zero serious/critical findings; no normal-session
-third-party requests or browser errors; Lighthouse mobile 99 performance/100
-accessibility; and byte-for-byte live/candidate identity. The PWA repair
-described below remains verified, but it does not remedy the keyboard blocker.
+The deployable repair is commit `130d215` (`fix: restore keyboard mechanism
+workflow`), pushed to `main` and deployed to
+<https://mechanism-playground.sociobot.in/> on 2026-08-28 UTC. Static deployment
+`151b1015-d34d-49be-9ed8-aaf4ff66d493` completed successfully.
 
----
+## Repairs
 
-## Release status: deployed and verified
+### Keyboard-only mechanism building (P1)
 
-This repair resolves the P1 cold-cache offline failure reported in
-`.factory/verification-4.md` for candidate
-`f7b97fc0c35b7d21aec097324e32b778e674eca4`.
+- The SVG drawing sheet is now a real Tab stop (`tabindex="0"`) with precise
+  instructions for the current keyboard state.
+- Selecting a drawer part transfers focus to the drawing sheet. A visible,
+  non-interfering cyanotype/red placement marker starts at the sheet centre;
+  arrow keys move it in 32-unit drafting increments and Enter or Space places
+  the selected part. Pointer click and drag/drop behavior are unchanged.
+- A focused SVG mechanism now selects itself on Enter or Space. Arrow keys,
+  R, and Delete first bind to the focused mechanism rather than a stale prior
+  selection. The marker and help/README copy explain the full route.
 
-Vite now derives the service-worker precache entries from the final generated
-`dist/index.html`, so the service worker always installs the fingerprinted JS
-and CSS that bootstrap the workshop. The generated cache name is content-based
-(`mechanism-playground-e359a476ff4d` for the verified build). The worker uses
-its own versioned cache with `ignoreVary` for same-origin precached resources;
-this prevents a host-added `Vary: Origin` response header from defeating an
-otherwise valid install-time cache entry. Existing update behavior remains:
-old caches are deleted on activation, `clients.claim()` is retained, and
-`SKIP_WAITING` still supports the in-app update toast.
+### Cached invalid-license notice (low)
+
+`initializeLicense` now retains the invalid cached verdict reason during its
+once-per-day cache window. Forge Edition stays locked and the quiet inactive
+license notice is present on later launches without making another verification
+request.
 
 ## Regression coverage
 
-`tests/app.spec.ts` now performs the verifier's exact cold-cache sequence in
-both declared Playwright projects:
+`tests/app.spec.ts` adds two verifier-specific browser regressions, each run in
+the desktop and Pixel 5/390 px projects:
 
-1. load online and wait for a controlling service worker;
-2. clear only Chromium's ordinary HTTP cache with CDP;
-3. set the context offline and reload;
-4. assert all 10 part tools and all 10 puzzle cards render; and
-5. place a small gear on the board and verify the placed part is usable.
+1. Keyboard-only Puzzle 01: opens the puzzle, selects Small gear, receives
+   focus on the sheet, moves the marker with arrows, places it with Enter,
+   solves the crank-to-bell chain, then selects/rotates the focused crank.
+2. Invalid license cache: mocks one invalid verification response, reloads,
+   asserts no second verification request, and asserts the inactive-license
+   notice remains visible.
 
-This catches the prior false pass, where an extra online reload populated a
-runtime cache before the offline assertion.
+Existing cold-cache offline, Axe, import-security, persistence, export, and
+mobile keyboard regressions remain passing.
 
 ## Verification performed
 
 | Check | Result |
 | --- | --- |
 | `npm ci` | Passed; 61 packages audited, 0 vulnerabilities. |
-| `npm test` | Passed; 8/8 Vitest unit tests. |
-| `npm run build` | Passed; TypeScript `--noEmit` plus Vite production build, with `dist/index.html` at its root. |
-| `npm run test:e2e -- --workers=4` | Passed; 15 tests across desktop and Pixel 5/390 px, with 1 intentional desktop-only mobile-keyboard skip. Axe serious/critical scan is included and passed. |
-| Cold-cache offline regression | Passed independently on desktop and mobile: Cache Storage held both hashed app assets after installation; after HTTP-cache clear and offline reload, 10 tools, 10 cards, and offline part placement all worked with no failed requests. |
-| Keyboard/mobile/reduced motion | Covered by the existing desktop/mobile suite: 390 px overflow, Blueprint-file keyboard path, rotation/undo, and the product's reduced-motion behavior remain passing. |
-| Import/security recovery | Existing suite passed hostile quoted-ID rejection, unknown-part recovery, malformed JSON recovery, and prior-board preservation. |
-| Privacy/response policy | Source/build inspection and live request capture confirmed no normal-session third-party assets; CSP only permits the documented optional Sociobot license endpoint, immutable `/assets/*` and `/icons/*`, no-store `sw.js`, and manifest MIME policy remain in `dist/staticwebapp.config.json`. |
+| `npm test` | Passed: 8/8 Vitest unit tests. |
+| `npm run build` | Passed: strict TypeScript (`tsc --noEmit`) and Vite production build; `dist/index.html` is at the output root. |
+| `npm run test:e2e -- --workers=4` | Passed: 19 tests across desktop and Pixel 5/390 px; 1 intentional desktop-only skip for the exact-phone keyboard test. Includes Axe (zero serious/critical), keyboard, import recovery, license-cache, persistence, and cold-cache offline coverage. |
+| Lint/type | No separate lint command is declared; strict type checking passes in `npm run build`. |
+| Package/consumer | Not applicable: this is a static PWA, not a library, CLI, backend, or published package. |
 
-Verified build sizes: JS 24,417 B raw / 8,991 B gzip; CSS 13,701 B raw /
-3,674 B gzip; illustration 47,036 B. All are within the static-PWA budgets.
-There is no package/consumer artifact for this static PWA.
+Fresh build assets are within the static-PWA budget:
 
-## Deploy and live verification
+- JavaScript: `index-Bcbop2sm.js`, 25,979 B raw / 9,442 B gzip.
+- CSS: `index-pa_KLhgM.css`, 13,993 B raw / 3,719 B gzip.
+- First-run illustration remains 47,036 B.
 
-Deployment used `/opt/fleet/lib/deploy-static.sh mechanism-playground dist` and
-completed successfully to <https://mechanism-playground.sociobot.in/>. The
-repair commits are `e40f0b1d1a1fe3c349325e4636fc00f268c5650b` and the final
-handoff-evidence commit below.
+Live mobile Lighthouse (Chrome 151, Lighthouse 13.4.1): Performance **100**,
+Accessibility **100**, Best Practices **100**, SEO **100**; LCP **1.4 s**,
+CLS **0.035**, TBT **20 ms**.
 
-`verify-url.sh` completed against production with HTTP 200, a 991 ms browser
-load, no console/page errors, the expected title and `lang=en`, one `<h1>`, a
-`<main>`, and no missing image alt text or unlabeled buttons. Live headers
-confirm HSTS, the restrictive self-only CSP, `Referrer-Policy`, `nosniff`,
-one-year immutable app-asset caching, no-store service-worker caching, and
-`application/manifest+json` for the manifest.
+## Live verification
 
-The live output exactly matches the verified build:
+`verify-url.sh` against the custom production domain returned HTTP 200 in
+980 ms with no console/page errors, expected title and `lang=en`, one `<h1>`,
+one `<main>`, zero missing image alts, and zero unlabeled buttons.
+
+A fresh live Playwright session made normal requests only to
+`https://mechanism-playground.sociobot.in` (no analytics, third-party font,
+script, or outbound request). It completed the keyboard-only Puzzle 01 path
+above and proved focused-part selection. At exactly 390 x 844 with reduced
+motion, `scrollWidth === clientWidth === 390`, reduced motion was active, the
+crank remained paused, and no browser errors occurred.
+
+For the PWA cold-cache sequence, the live page waited for service-worker
+control, cleared only the ordinary Chromium HTTP cache, went offline, and
+reloaded. The offline workshop rendered all 10 part tools and all 10 puzzle
+cards. The service worker is content-versioned, precaches the final hashed JS
+and CSS, uses `clients.claim`, accepts `SKIP_WAITING`, and retains the in-app
+update-toast route.
+
+Production headers were rechecked: HSTS, restrictive self-only CSP (with only
+the documented optional Sociobot verification endpoint in `connect-src`),
+`Referrer-Policy: strict-origin-when-cross-origin`, and `nosniff` are present.
+Hashed `/assets/*` are immutable for one year; HTML/manifest revalidate;
+`sw.js` is `no-cache, no-store, must-revalidate`; the manifest is served as
+`application/manifest+json`.
+
+The live production artifacts match the verified `dist/` byte for byte:
 
 | Artifact | SHA-256 |
 | --- | --- |
-| `index.html` | `42be8dc6948a58f3d7895a2752083dd262dc186b3188f2d7d092bdc45862c18e` |
-| `assets/index-3kPtKeFz.js` | `47c2aaa4267f64513a0b4a76f5b86ababda5ae4430d9bcd760df1b47b4185cb0` |
-| `assets/index-Bv3AmGK4.css` | `773aaecc0cb6b78049e1c2a12446a5bc56301eb0e28e314f9e7c5d2869adb0c1` |
-| `sw.js` | `9ea99c247c9b41a094d195575f2840e5f54a16392bca1f53b34169f7976853bc` |
-
-Fresh live desktop and 390×844/reduced-motion profiles each showed only the
-same-origin production host in normal requests. In each profile, the installed
-cache held the hashed JS and CSS; after DevTools HTTP-cache clear and offline
-reload, all 10 tools and all 10 cards rendered, a small gear could be placed,
-there was no overflow, motion stayed paused, and no console/page error occurred.
+| `index.html` | `f670aa9fd32f8b51dfc51b7e4478ee4204644099afbcbd23c4c10b9f75d53661` |
+| `assets/index-Bcbop2sm.js` | `ed13470ed76e73181882a0b56e02213525c24522d7032b5d81bf9785f32f0abe` |
+| `assets/index-pa_KLhgM.css` | `fd688d938109c13036cb185948f1b0c22f5c00171793c3077ab2d00ccb7dde5f` |
+| `sw.js` | `638720a3f77d3f938d8b7e321b8fd2ed68ffaa056dcf4a4d076171eaaee25b18` |
+| `manifest.webmanifest` | `0d9305b93de5c00b6fbb55b8cb82950fdb0c8ef25abc4d1204a3fd24264f61f3` |
 
 ## Known gaps / next steps
 
-None known.
+None known. The production product remains a local-first static PWA; no
+server persistence, health endpoint, concurrency suite, or package-consumer
+check applies.
